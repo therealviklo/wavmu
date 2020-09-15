@@ -1,8 +1,10 @@
 ﻿#include "window.h"
 #include "dv2.h"
+#include "player.h"
 
 #include "window.cpp"
 #include "dv2.cpp"
+#include "player.cpp"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
