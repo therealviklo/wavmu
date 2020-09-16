@@ -10,25 +10,36 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
 	try
 	{
-		if (FAILED(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED)))
-			throw std::runtime_error("Failed to initialise COM and Windows Runtime APIs");
+		if (FAILED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
+			throw std::runtime_error("Failed to initialise COM");
 		try
 		{
 			Window w(L"Wavmu", 720, 480, true);
 
+			Player p;
+
 			while (w.exists())
 			{
-				w.dv2.clear();
+				for (auto wke = w.keyboard.getEvent(); wke.type != WKET_INVALID; wke = w.keyboard.getEvent())
+				{
+					if (wke.type == WKET_KEYDOWN && wke.key == VK_SPACE)
+						p.start();
+					else if (wke.type == WKET_KEYUP && wke.key == VK_SPACE)
+						p.stop();
+				}
 
-				w.dv2.presentNoSync();
-				w.updateBlocking();
+				// w.dv2.clear();
+
+				// w.dv2.presentNoSync();
+				w.update();
 			}
 		}
 		catch (...)
 		{
-			Windows::Foundation::Uninitialize();
+			CoUninitialize();
 			throw;
 		}
+		CoUninitialize();
 	}
 	catch (const std::exception& e)
 	{
