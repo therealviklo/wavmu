@@ -10,14 +10,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
 	try
 	{
-		Window w(L"Wavmu", 720, 480, true);
-
-		while (w.exists())
+		if (FAILED(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED)))
+			throw std::runtime_error("Failed to initialise COM and Windows Runtime APIs");
+		try
 		{
-			w.dv2.clear();
+			Window w(L"Wavmu", 720, 480, true);
 
-			w.dv2.presentNoSync();
-			w.updateBlocking();
+			while (w.exists())
+			{
+				w.dv2.clear();
+
+				w.dv2.presentNoSync();
+				w.updateBlocking();
+			}
+		}
+		catch (...)
+		{
+			Windows::Foundation::Uninitialize();
+			throw;
 		}
 	}
 	catch (const std::exception& e)
