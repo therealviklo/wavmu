@@ -66,7 +66,6 @@ void Player::startVoice()
 	const std::lock_guard<std::mutex> lg(comMutex);
 	if (FAILED(sourceVoice->Start()))
 		throw Exception("Failed to start source voice");
-	playingPos = 0;
 }
 
 void Player::stopVoice()
@@ -137,6 +136,7 @@ void Player::start()
 {
 	const std::lock_guard<std::mutex> lg(playingMutex);
 	playing = true;
+	playingPos = 0;
 }
 
 void Player::stop()
