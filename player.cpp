@@ -9,44 +9,62 @@ void voiceDeleter(T* voice)
 	}
 }
 
+void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
+{
+	try
+	{
+		player->playingWaiter.notify_all();
+	} catch (...) {}
+}
+
 void Player::loop()
 {
 	try
 	{
+		std::unique_lock<std::mutex> pwul(playingWaiterMutex);
 		while (true)
 		{
+			playingWaiter.wait(pwul);
+
 			{
 				const std::lock_guard<std::mutex> lg(runningMutex);
 				if (!running) break;
 			}
 
 			{
-				const std::lock_guard<std::mutex> lg(playingMutex);
+				std::unique_lock<std::mutex> lg(playingMutex);
 				if (playing)
 				{
+					while (true)
 					{
-						const std::lock_guard<std::mutex> lg2(comMutex);
-						XAUDIO2_VOICE_STATE state;
-						sourceVoice->GetState(&state);
-						if (state.BuffersQueued >= sizeof(bufs) / sizeof(*bufs)) continue;
-					}
+						{
+							const std::lock_guard<std::mutex> lg(runningMutex);
+							if (!running) break;
+						}
+						{
+							const std::lock_guard<std::mutex> lg2(comMutex);
+							XAUDIO2_VOICE_STATE state;
+							sourceVoice->GetState(&state);
+							if (state.BuffersQueued >= sizeof(bufs) / sizeof(*bufs)) break;
+						}
 
-					for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]); i++)
-					{
-						bufs[currBuf][i] = sin(playingPos / 50.0) * ((int32_t)(~(uint32_t)0 >> 1) / 2);
-						playingPos++;
-					}
+						for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]); i++)
+						{
+							bufs[currBuf][i] = sin(playingPos / 50.0) * ((int32_t)(~(uint32_t)0 >> 1) / 2);
+							playingPos++;
+						}
 
-					{
-						const std::lock_guard<std::mutex> lg2(comMutex);
-						XAUDIO2_BUFFER bd{};
-						bd.AudioBytes = sizeof(bufs[currBuf]);
-						bd.pAudioData = reinterpret_cast<uint8_t*>(&bufs[currBuf]);
-						if (FAILED(sourceVoice->SubmitSourceBuffer(&bd)))
-							throw Exception("Failed to submit source buffer");
-					}
+						{
+							const std::lock_guard<std::mutex> lg2(comMutex);
+							XAUDIO2_BUFFER bd{};
+							bd.AudioBytes = sizeof(bufs[currBuf]);
+							bd.pAudioData = reinterpret_cast<uint8_t*>(&bufs[currBuf]);
+							if (FAILED(sourceVoice->SubmitSourceBuffer(&bd)))
+								throw Exception("Failed to submit source buffer");
+						}
 
-					currBuf = (currBuf + 1) % (sizeof(bufs) / sizeof(*bufs));
+						currBuf = (currBuf + 1) % (sizeof(bufs) / sizeof(*bufs));
+					}
 				}
 			}
 		}
@@ -81,7 +99,8 @@ Player::Player()
 	  playingPos(0),
 	  masteringVoice(nullptr, &voiceDeleter<IXAudio2MasteringVoice>),
 	  sourceVoice(nullptr, &voiceDeleter<IXAudio2SourceVoice>),
-	  currBuf(0)
+	  currBuf(0),
+	  callback(this)
 {
 	if (FAILED(XAudio2Create(&xa2)))
 		throw Exception("Failed to initialise XAudio2");
@@ -100,7 +119,7 @@ Player::Player()
 	wf.nAvgBytesPerSec = wf.nSamplesPerSec * wf.nBlockAlign;
 	wf.wBitsPerSample = sizeof(**bufs) * 8;
 	IXAudio2SourceVoice* tempSourceVoice = nullptr;
-	if (FAILED(xa2->CreateSourceVoice(&tempSourceVoice, &wf)))
+	if (FAILED(xa2->CreateSourceVoice(&tempSourceVoice, &wf, 0, 2.0f, &callback)))
 		throw Exception("Failed to create source voice");
 	decltype(sourceVoice) tempSourceVoice2(tempSourceVoice, &voiceDeleter<IXAudio2SourceVoice>);
 	tempSourceVoice2.swap(sourceVoice);
@@ -128,15 +147,26 @@ Player::~Player()
 		{
 			running = false;
 		}
+		try
+		{
+			const std::lock_guard<std::mutex> lg(playingWaiterMutex);
+			playingWaiter.notify_all();
+		} catch (...) {}
 		playerThread.join();
 	} catch (...) {}
 }
 
 void Player::start()
 {
-	const std::lock_guard<std::mutex> lg(playingMutex);
-	playing = true;
-	playingPos = 0;
+	{
+		const std::lock_guard<std::mutex> lg(playingMutex);
+		playing = true;
+		playingPos = 0;
+	}
+	{
+		const std::lock_guard<std::mutex> lg(playingWaiterMutex);
+		playingWaiter.notify_all();
+	}
 }
 
 void Player::stop()
