@@ -32,9 +32,11 @@ void Player::loop()
 			}
 
 			{
-				std::unique_lock<std::mutex> lg(playingMutex);
+				std::unique_lock<std::mutex> ul(playingMutex);
 				if (playing)
 				{
+					ul.unlock();
+					
 					while (true)
 					{
 						{
@@ -42,16 +44,19 @@ void Player::loop()
 							if (!running) break;
 						}
 						{
-							const std::lock_guard<std::mutex> lg2(comMutex);
+							const std::lock_guard<std::mutex> lg(comMutex);
 							XAUDIO2_VOICE_STATE state;
 							sourceVoice->GetState(&state);
 							if (state.BuffersQueued >= sizeof(bufs) / sizeof(*bufs)) break;
 						}
 
-						for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]); i++)
 						{
-							bufs[currBuf][i] = sin(playingPos / 50.0) * ((int32_t)(~(uint32_t)0 >> 1) / 2);
-							playingPos++;
+							const std::lock_guard<std::mutex> lg(playingMutex);
+							for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]); i++)
+							{
+								bufs[currBuf][i] = sin(playingPos / 50.0) * ((int32_t)(~(uint32_t)0 >> 1) / 2);
+								playingPos++;
+							}
 						}
 
 						{
@@ -91,6 +96,7 @@ void Player::stopVoice()
 	const std::lock_guard<std::mutex> lg(comMutex);
 	if (FAILED(sourceVoice->Stop()))
 		throw Exception("Failed to stop source voice");
+	sourceVoice->FlushSourceBuffers();
 }
 
 Player::Player()
@@ -171,6 +177,12 @@ void Player::start()
 
 void Player::stop()
 {
-	const std::lock_guard<std::mutex> lg(playingMutex);
-	playing = false;
+	{
+		const std::lock_guard<std::mutex> lg(playingMutex);
+		playing = false;
+	}
+	{
+		const std::lock_guard<std::mutex> lg(comMutex);
+		sourceVoice->FlushSourceBuffers();
+	}
 }
