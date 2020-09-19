@@ -113,8 +113,12 @@ Wave::Wave(const char* file)
 	}
 }
 
-Sample Wave::at(uint32_t sampleNum, uint32_t sampleRate, double pitchShift) const
+Sample Wave::at(uint32_t sampleNum, uint32_t sampleRate, uint16_t channel, double pitchShift) const
 {
-	const double samplePos = sampleNum / (double)sampleRate / pitchShift * info.sampleRate;
-	return std::lerp(data.at(floor(samplePos)), data.at(floor(samplePos) + 1), fmod(samplePos, 1.0));
+	const double samplePos = fmod(sampleNum / (double)sampleRate / pitchShift * info.sampleRate, data.size() / info.channels);
+	return std::lerp(
+		data.at(floor(samplePos) * info.channels + channel),
+		data.at(floor(samplePos) * info.channels + channel + 1),
+		fmod(samplePos, 1.0)
+	);
 }

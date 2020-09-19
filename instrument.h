@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cstdint>
 #include <vector>
+#include "wav.h"
 
 class Instrument
 {
@@ -11,7 +12,7 @@ public:
 class SampleInstrument : public Instrument
 {
 private:
-	std::vector<uint8_t> data;
+	Wave wave;
 public:
 	SampleInstrument(const char* file);
 };

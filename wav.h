@@ -26,5 +26,5 @@ public:
 	uint16_t getChannels() const noexcept {return info.channels;}
 	uint32_t getSampleRate() const noexcept {return info.sampleRate;}
 
-	Sample at(uint32_t sampleNum, uint32_t sampleRate, double pitchShift) const;
+	Sample at(uint32_t sampleNum, uint32_t sampleRate, uint16_t channel, double pitchShift) const;
 };
