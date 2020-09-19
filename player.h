@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <memory>
 #include <condition_variable>
+#include "wav.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -36,7 +37,7 @@ private:
 	std::unique_ptr<IXAudio2MasteringVoice, decltype(&voiceDeleter<IXAudio2MasteringVoice>)> masteringVoice;
 	std::unique_ptr<IXAudio2SourceVoice, decltype(&voiceDeleter<IXAudio2SourceVoice>)> sourceVoice;
 
-	int32_t bufs[8][256];
+	Sample bufs[8][256];
 	uint8_t currBuf;
 
 	class Callback : public IXAudio2VoiceCallback

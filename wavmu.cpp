@@ -5,6 +5,8 @@
 #include "window.cpp"
 #include "dv2.cpp"
 #include "player.cpp"
+#include "instrument.cpp"
+#include "wav.cpp"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {

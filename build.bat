@@ -1,1 +1,1 @@
-﻿@clang++ wavmu.cpp -o wavmu.exe -O2 -luser32 -ld3d11 -mwindows
+﻿@clang++ wavmu.cpp -o wavmu.exe -O2 -luser32 -ld3d11 -mwindows -std=c++20
