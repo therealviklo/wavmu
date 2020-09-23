@@ -13,6 +13,8 @@ void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
 {
 	try
 	{
+		/* Vanligtvis borde player->playingWaiterMutex låsas men man ska tydligen
+		   inte göra någon trådsynkronisering i en XAudio2-callback. */
 		player->playingWaiter.notify_all();
 	} catch (...) {}
 }
