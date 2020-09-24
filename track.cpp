@@ -4,31 +4,40 @@ PlayState::PlayState(Tracks& tracks)
 	: position(0),
 	  tracks(tracks.data)
 {
+	// Lås trackmutexen för vi ska ändra på tracks.
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
 	
+	// Försök att låsa "playing"-mutexen och swappa in den i playingLock.
 	std::unique_lock<std::mutex> tmpUl(tracks.playingMutex, std::defer_lock);
 	if (!tmpUl.try_lock()) throw AlreadyPlayingException();
 	playingLock.swap(tmpUl);
 
+	// Vi ska iterera igenom alla track nu så vi ändrar storleken på vectorn till antalet track.
 	trackIterators.resize(tracks.data.size());
+	// Gå igenom alla track.
 	for (size_t i = 0; i < tracks.data.size(); i++)
 	{
-		std::sort(
-			tracks.data[i].sections.begin(),
-			tracks.data[i].sections.end(),
-			[](const Track::SectionRef& l, const Track::SectionRef& r) -> bool {return l.timestamp < r.timestamp;}
-		);
+		auto& currTrack = tracks.data[i]; // Nuvarande elementet i tracks
+		auto& currIteratorTrack = trackIterators[i]; // Nuvarande elementet i trackIterators
 
-		trackIterators[i].resize(tracks.data[i].sections.size());
-		for (size_t j = 0; j < tracks.data[i].sections.size(); j++)
+		// Ändra storleken på tracket till antalet sektioner.
+		currIteratorTrack.resize(tracks.data[i].sections.size());
+		// Gå igenom alla sektioner i tracket.
+		for (size_t j = 0; j < currTrack.sections.size(); j++)
 		{
+			// Typ som currTrack men för sektionen (Jag avrefererar Track::SectionRef::section också)
+			auto& currSection = *currTrack.sections[j].section;
+			auto& currIteratorSection = currIteratorTrack[j]; // Som currIteratorTrack men för sektionen
+
+			// Sortera alla noter i sektionen.
 			std::sort(
-				tracks.data[i].sections[j].section->notes.begin(),
-				tracks.data[i].sections[j].section->notes.end(),
+				currSection.notes.begin(),
+				currSection.notes.end(),
 				[](const Note& l, const Note& r) -> bool {return l.timestamp < r.timestamp;}
 			);
 
-			trackIterators[i][j].iterator = tracks.data[i].sections[j].section->notes.begin();
+			// Sätt iteratorn till början av sektionen.
+			currIteratorSection.iterator = currSection.notes.begin();
 		}
 	}
 }
