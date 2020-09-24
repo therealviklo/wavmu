@@ -7,6 +7,7 @@
 #include "player.cpp"
 #include "instrument.cpp"
 #include "wav.cpp"
+#include "track.cpp"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {

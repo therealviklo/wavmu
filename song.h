@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <cstdint>
+#include <vector>
 
 typedef uint8_t Tone;
 
@@ -9,3 +10,10 @@ struct Note
 	double length;
 	Tone tone;
 };
+
+struct Section
+{
+	std::vector<Note> notes;
+	/* double length; */ // Kanske
+};
+typedef std::vector<Section> Sections;

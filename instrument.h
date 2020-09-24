@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include <numbers>
+#include <mutex>
 #include "wav.h"
 #include "song.h"
 
