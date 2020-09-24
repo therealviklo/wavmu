@@ -7,6 +7,7 @@
 #include <memory>
 #include <condition_variable>
 #include "wav.h"
+#include "track.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -28,9 +29,8 @@ private:
 
 	std::mutex playingWaiterMutex;
 	std::condition_variable playingWaiter;
-	std::mutex playingMutex;
-	bool playing;
-	size_t playingPos;
+	std::mutex playStateMutex;
+	std::unique_ptr<PlayState> playState;
 
 	std::mutex comMutex;
 	ComPtr<IXAudio2> xa2;
@@ -67,6 +67,6 @@ public:
 	Player(const Player&) = delete;
 	Player& operator=(const Player&) = delete;
 
-	void start();
+	void start(Tracks& tracks);
 	void stop();
 };

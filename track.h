@@ -25,6 +25,7 @@ struct Tracks
 
 class PlayState
 {
+public:
 	class AlreadyPlayingException : std::runtime_error
 	{
 	public:
@@ -33,7 +34,8 @@ class PlayState
 	struct NotePlayState
 	{
 		Tone tone;
-		double timeLeft;
+		double timeElapsed;
+		double duration;
 	};
 	struct SectionPlayState
 	{
@@ -47,11 +49,11 @@ class PlayState
 private:
 	std::unique_lock<std::mutex> playingLock;
 	double position;
-	std::vector<Track>& tracks;
+	Tracks& tracks;
 	std::vector<std::vector<SectionPlayState>> trackIterators;
 public:
 	// Kastar PlayState::AlreadyPlayingException om låten redan spelas.
 	PlayState(Tracks& tracks);
 
-	SamplePair get(uint32_t sampleRate) const;
+	SamplePair get(uint32_t sampleRate);
 };

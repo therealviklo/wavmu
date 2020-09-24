@@ -34,8 +34,8 @@ void Player::loop()
 			}
 
 			{
-				std::unique_lock<std::mutex> ul(playingMutex);
-				if (playing)
+				std::unique_lock<std::mutex> ul(playStateMutex);
+				if (playState)
 				{
 					ul.unlock();
 					
@@ -53,11 +53,12 @@ void Player::loop()
 						}
 
 						{
-							const std::lock_guard<std::mutex> lg(playingMutex);
-							for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]); i++)
+							const std::lock_guard<std::mutex> lg(playStateMutex);
+							for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]) / 2; i++)
 							{
-								bufs[currBuf][i] = sin(playingPos / 50.0) * ((int32_t)(~(uint32_t)0 >> 1) / 2);
-								playingPos++;
+								auto samples = playState->get(44100);
+								bufs[currBuf][2 * i] = samples.samples[0];
+								bufs[currBuf][2 * i + 1] = samples.samples[1];
 							}
 						}
 
@@ -103,8 +104,6 @@ void Player::stopVoice()
 
 Player::Player()
 	: running(true),
-	  playing(false),
-	  playingPos(0),
 	  masteringVoice(nullptr, &voiceDeleter<IXAudio2MasteringVoice>),
 	  sourceVoice(nullptr, &voiceDeleter<IXAudio2SourceVoice>),
 	  currBuf(0),
@@ -164,12 +163,11 @@ Player::~Player()
 	} catch (...) {}
 }
 
-void Player::start()
+void Player::start(Tracks& tracks)
 {
 	{
-		const std::lock_guard<std::mutex> lg(playingMutex);
-		playing = true;
-		playingPos = 0;
+		const std::lock_guard<std::mutex> lg(playStateMutex);
+		playState = std::make_unique<PlayState>(tracks);
 	}
 	{
 		const std::lock_guard<std::mutex> lg(playingWaiterMutex);
@@ -180,8 +178,8 @@ void Player::start()
 void Player::stop()
 {
 	{
-		const std::lock_guard<std::mutex> lg(playingMutex);
-		playing = false;
+		const std::lock_guard<std::mutex> lg(playStateMutex);
+		playState = nullptr;
 	}
 	{
 		const std::lock_guard<std::mutex> lg(comMutex);

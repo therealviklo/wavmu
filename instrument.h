@@ -11,7 +11,7 @@ class Instrument
 public:
 	~Instrument() = default;
 
-	virtual Sample at(uint32_t sampleNum, uint32_t sampleRate, uint16_t channel, Tone tone) const = 0;
+	virtual Sample at(double pos, uint16_t channel, Tone tone) const = 0;
 };
 
 class SampleInstrument : public Instrument
@@ -22,11 +22,11 @@ private:
 public:
 	SampleInstrument(const char* file);
 	
-	Sample at(uint32_t sampleNum, uint32_t sampleRate, uint16_t channel, Tone tone) const override;
+	Sample at(double pos, uint16_t channel, Tone tone) const override;
 };
 
 class SinInstrument : public Instrument
 {
 public:
-	Sample at(uint32_t sampleNum, uint32_t sampleRate, uint16_t channel, Tone tone) const override;
+	Sample at(double pos, uint16_t channel, Tone tone) const override;
 };

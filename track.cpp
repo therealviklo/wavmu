@@ -2,7 +2,7 @@
 
 PlayState::PlayState(Tracks& tracks)
 	: position(0),
-	  tracks(tracks.data)
+	  tracks(tracks)
 {
 	// Lås trackmutexen för vi ska ändra på tracks.
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
@@ -42,9 +42,55 @@ PlayState::PlayState(Tracks& tracks)
 	}
 }
 
-PlayState::SamplePair PlayState::get(uint32_t sampleRate) const
+PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 {
+	const std::lock_guard<std::mutex> lg(tracks.mtx);
 	SamplePair sp{0, 0};
+
+	position += 1.0 / sampleRate;
+
+	for (size_t i = 0; i < trackIterators.size(); i++)
+	{
+		auto& currTrack = tracks.data[i];
+		auto& currIteratorTrack = trackIterators[i];
+		
+		for (size_t j = 0; j < currIteratorTrack.size(); j++)
+		{
+			auto& currSection = currTrack.sections[j];
+			auto& currIteratorSection = currIteratorTrack[j];
+
+			for (auto& i : currIteratorSection.currNotes)
+			{
+				i.timeElapsed += 1.0 / sampleRate;
+			}
+
+			while (currIteratorSection.iterator != currSection.section->notes.end() &&
+				   currIteratorSection.iterator->timestamp <= position)
+			{
+				currIteratorSection.currNotes.push_back({
+					currIteratorSection.iterator->tone,
+					position - currIteratorSection.iterator->timestamp,
+					currIteratorSection.iterator->length
+				});
+
+				currIteratorSection.iterator++;
+			}
+
+			for (auto i = currIteratorSection.currNotes.begin(); i != currIteratorSection.currNotes.end(); )
+			{
+				if (i->timeElapsed > i->duration)
+				{
+					i = currIteratorSection.currNotes.erase(i);
+					continue;
+				}
+
+				sp.samples[0] += currTrack.instrument->at(i->timeElapsed, 0, i->tone);
+				sp.samples[1] += currTrack.instrument->at(i->timeElapsed, 1, i->tone);
+
+				i++;
+			}
+		}
+	}
 
 	return sp;
 }
