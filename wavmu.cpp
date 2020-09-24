@@ -19,16 +19,45 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		{
 			Window w(L"Wavmu", 720, 480, true);
 
+			Sections sections = {{{
+				{0.5, 0.5, 69},
+				{0.0, 0.5, 60},
+				{1.5, 0.5, 69},
+				{1.0, 0.5, 60},
+				{2.5, 0.5, 69},
+				{2.0, 0.5, 60},
+				{3.5, 0.5, 69},
+				{3.0, 0.5, 60},
+				{4.5, 0.5, 69},
+				{4.0, 0.5, 60}
+			}}};
+
+			Tracks tracks;
+			tracks.data.emplace_back();
+			tracks.data[0].instrument = std::make_unique<SinInstrument>();
+			tracks.data[0].sections = {{&sections[0], 0.0}};
+
 			Player p;
 
+			bool spaceDown = false;
 			while (w.exists())
 			{
-				for (auto wke = w.keyboard.getEvent(); wke.type != WKET_INVALID; wke = w.keyboard.getEvent())
+				// for (auto wke = w.keyboard.getEvent(); wke.type != WKET_INVALID; wke = w.keyboard.getEvent())
+				// {
+				// 	if (wke.type == WKET_KEYDOWN && wke.key == VK_SPACE)
+				// 		p.start(tracks);
+				// 	else if (wke.type == WKET_KEYUP && wke.key == VK_SPACE)
+				// 		p.stop();
+				// }
+				if (w.keyboard.keyDown(VK_SPACE) && !spaceDown)
 				{
-					if (wke.type == WKET_KEYDOWN && wke.key == VK_SPACE)
-						p.start();
-					else if (wke.type == WKET_KEYUP && wke.key == VK_SPACE)
-						p.stop();
+					spaceDown = true;
+					p.start(tracks);
+				}
+				else if (!w.keyboard.keyDown(VK_SPACE) && spaceDown)
+				{
+					spaceDown = false;
+					p.stop();
 				}
 
 				// w.dv2.clear();

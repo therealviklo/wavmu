@@ -9,7 +9,7 @@
 class Instrument
 {
 public:
-	~Instrument() = default;
+	virtual ~Instrument() = default;
 
 	virtual Sample at(double pos, uint16_t channel, Tone tone) const = 0;
 };

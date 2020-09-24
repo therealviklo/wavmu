@@ -167,6 +167,7 @@ void Player::start(Tracks& tracks)
 {
 	{
 		const std::lock_guard<std::mutex> lg(playStateMutex);
+		playState = nullptr;
 		playState = std::make_unique<PlayState>(tracks);
 	}
 	{
