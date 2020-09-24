@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "instrument.h"
 
 struct Track
@@ -19,7 +20,7 @@ struct Tracks
 	std::mutex mtx;
 	// Vissa saker ska inte göras när noterna spelas upp. Denna mutex är låst då.
 	std::mutex playingMutex;
-	std::vector<Track> tracks;
+	std::vector<Track> data;
 };
 
 class PlayState
@@ -29,9 +30,28 @@ class PlayState
 	public:
 		AlreadyPlayingException() : std::runtime_error("Song is already playing") {}
 	};
+	struct NotePlayState
+	{
+		Tone tone;
+		double timeLeft;
+	};
+	struct SectionPlayState
+	{
+		std::vector<Note>::iterator iterator;
+		std::vector<NotePlayState> currNotes;
+	};
+	struct SamplePair
+	{
+		Sample samples[2];
+	};
 private:
 	std::unique_lock<std::mutex> playingLock;
+	double position;
+	std::vector<Track>& tracks;
+	std::vector<std::vector<SectionPlayState>> trackIterators;
 public:
 	// Kastar PlayState::AlreadyPlayingException om låten redan spelas.
 	PlayState(Tracks& tracks);
+
+	SamplePair get(uint32_t sampleRate) const;
 };
