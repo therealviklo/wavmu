@@ -19,7 +19,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		{
 			Window w(L"Wavmu", 720, 480, true);
 
-			Sections sections = {{{
+			Sections sections = {std::make_shared<Section>(Section{{
 				{0.5, 0.5, 69},
 				{0.0, 0.5, 60},
 				{1.5, 0.5, 69},
@@ -30,12 +30,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 				{3.0, 0.5, 60},
 				{4.5, 0.5, 69},
 				{4.0, 0.5, 60}
-			}}};
+			}})};
 
 			Tracks tracks;
 			tracks.data.emplace_back();
 			tracks.data[0].instrument = std::make_unique<SinInstrument>();
-			tracks.data[0].sections = {{&sections[0], 0.0}};
+			tracks.data[0].sections = {{sections[0], 1.0}};
 
 			Player p;
 

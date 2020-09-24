@@ -65,11 +65,11 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 			}
 
 			while (currIteratorSection.iterator != currSection.section->notes.end() &&
-				   currIteratorSection.iterator->timestamp <= position)
+				   currIteratorSection.iterator->timestamp + currSection.timestamp <= position)
 			{
 				currIteratorSection.currNotes.push_back({
 					currIteratorSection.iterator->tone,
-					position - currIteratorSection.iterator->timestamp,
+					position - (currIteratorSection.iterator->timestamp + currSection.timestamp),
 					currIteratorSection.iterator->length
 				});
 

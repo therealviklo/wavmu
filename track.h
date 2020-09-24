@@ -6,7 +6,7 @@ struct Track
 {
 	struct SectionRef
 	{
-		Section* section;
+		std::shared_ptr<Section> section;
 		double timestamp;
 	};
 
