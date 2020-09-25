@@ -78,14 +78,16 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 
 			for (auto i = currIteratorSection.currNotes.begin(); i != currIteratorSection.currNotes.end(); )
 			{
-				if (i->timeElapsed > i->duration)
+				if (i->timeElapsed > i->duration + currTrack.instrument->getReleaseTime())
 				{
 					i = currIteratorSection.currNotes.erase(i);
 					continue;
 				}
 
-				sp.samples[0] += currTrack.instrument->at(i->timeElapsed, 0, i->tone);
-				sp.samples[1] += currTrack.instrument->at(i->timeElapsed, 1, i->tone);
+				sp.samples[0] += currTrack.instrument->at(i->timeElapsed, 0, i->tone)
+								 * currTrack.instrument->envelopeLevel(i->timeElapsed, i->duration);
+				sp.samples[1] += currTrack.instrument->at(i->timeElapsed, 1, i->tone)
+								 * currTrack.instrument->envelopeLevel(i->timeElapsed, i->duration);
 
 				i++;
 			}

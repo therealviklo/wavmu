@@ -8,6 +8,7 @@
 #include "instrument.cpp"
 #include "wav.cpp"
 #include "track.cpp"
+#include "envelope.cpp"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
