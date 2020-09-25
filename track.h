@@ -51,9 +51,10 @@ private:
 	double position;
 	Tracks& tracks;
 	std::vector<std::vector<SectionPlayState>> trackIterators;
+	BPM bpm;
 public:
 	// Kastar PlayState::AlreadyPlayingException om låten redan spelas.
-	PlayState(Tracks& tracks);
+	PlayState(Tracks& tracks, BPM bpm);
 
 	SamplePair get(uint32_t sampleRate);
 };

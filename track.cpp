@@ -1,8 +1,9 @@
 #include "track.h"
 
-PlayState::PlayState(Tracks& tracks)
+PlayState::PlayState(Tracks& tracks, BPM bpm)
 	: position(0),
-	  tracks(tracks)
+	  tracks(tracks),
+	  bpm(bpm)
 {
 	// Lås trackmutexen för vi ska ändra på tracks.
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
@@ -66,12 +67,12 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 			}
 
 			while (currIteratorSection.iterator != currSection.section->notes.end() &&
-				   currIteratorSection.iterator->timestamp + currSection.timestamp <= position)
+				   (currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0 <= position)
 			{
 				currIteratorSection.currNotes.push_back({
 					currIteratorSection.iterator->tone,
-					position - (currIteratorSection.iterator->timestamp + currSection.timestamp),
-					currIteratorSection.iterator->length
+					position - (currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0,
+					currIteratorSection.iterator->length / bpm * 240.0
 				});
 
 				currIteratorSection.iterator++;

@@ -3,6 +3,7 @@
 #include <vector>
 
 typedef uint8_t Tone;
+typedef double BPM;
 
 struct Note
 {

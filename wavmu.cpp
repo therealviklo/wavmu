@@ -93,7 +93,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 				if (w.keyboard.keyDown(VK_SPACE) && !spaceDown)
 				{
 					spaceDown = true;
-					p.start(tracks);
+					p.start(tracks, 240.0);
 				}
 				else if (!w.keyboard.keyDown(VK_SPACE) && spaceDown)
 				{
