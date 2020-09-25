@@ -53,6 +53,7 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 	{
 		auto& currTrack = tracks.data[i];
 		auto& currIteratorTrack = trackIterators[i];
+		const Instrument* const currInstrument = currTrack.instrument ? currTrack.instrument.get() : &defaultInstrument;
 		
 		for (size_t j = 0; j < currIteratorTrack.size(); j++)
 		{
@@ -78,16 +79,16 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 
 			for (auto i = currIteratorSection.currNotes.begin(); i != currIteratorSection.currNotes.end(); )
 			{
-				if (i->timeElapsed > i->duration + currTrack.instrument->getReleaseTime())
+				if (i->timeElapsed > i->duration + currInstrument->getReleaseTime())
 				{
 					i = currIteratorSection.currNotes.erase(i);
 					continue;
 				}
 
-				sp.samples[0] += currTrack.instrument->at(i->timeElapsed, 0, i->tone)
-								 * currTrack.instrument->envelopeLevel(i->timeElapsed, i->duration);
-				sp.samples[1] += currTrack.instrument->at(i->timeElapsed, 1, i->tone)
-								 * currTrack.instrument->envelopeLevel(i->timeElapsed, i->duration);
+				sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
+								 * currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+				sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
+								 * currInstrument->envelopeLevel(i->timeElapsed, i->duration);
 
 				i++;
 			}

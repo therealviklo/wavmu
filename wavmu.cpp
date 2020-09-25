@@ -75,7 +75,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 			Tracks tracks;
 			tracks.data.emplace_back();
-			tracks.data[0].instrument = std::make_unique<SinInstrument>();
+			tracks.data[0].instrument = nullptr;
 			tracks.data[0].sections = {{sections[0], 0.0}};
 
 			Player p;

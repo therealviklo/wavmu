@@ -38,3 +38,5 @@ public:
 
 	Sample at(double pos, uint16_t channel, Tone tone) const override;
 };
+
+const SinInstrument defaultInstrument;
