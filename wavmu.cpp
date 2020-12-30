@@ -2,17 +2,21 @@
 #include "player.h"
 #include "utils.h"
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+class TestWindow : public Window
 {
-	try
-	{
-		if (FAILED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
-			throw std::runtime_error("Failed to initialise COM");
-		Defer d([](){ CoUninitialize(); });
-
-		// Window w(L"Wavmu", 720, 480, true);
-
-		Sections sections = {std::make_shared<Section>(Section{{
+private:
+	Sections sections;
+	Tracks tracks;
+	Player player;
+public:
+	TestWindow()
+		: Window(
+			defWindowClass,
+			WS_OVERLAPPEDWINDOW,
+			WS_EX_OVERLAPPEDWINDOW,
+			L"Wavmu"
+		  ),
+		  sections{std::make_shared<Section>(Section{{
 			{0.0, 1/8., 60},
 			{1/8., 1/8., 60},
 			{2/8., 2/8., 72},
@@ -63,16 +67,63 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			{13/8. + 3 * 2.0, 1/8., 60},
 			{14/8. + 3 * 2.0, 1/8., 63},
 			{15/8. + 3 * 2.0, 1/8., 65},
-		}})};
-
-		Tracks tracks;
+		  }})}
+	{
 		tracks.data.emplace_back();
 		tracks.data[0].instrument = nullptr;
 		tracks.data[0].sections = {{sections[0], 0.0}};
+	}
 
-		Player p;
+	LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam) override
+	{
+		switch (msg)
+		{
+			static bool spaceDown = false;
+			case WM_KEYDOWN:
+			{
+				switch (wParam)
+				{
+					case VK_SPACE:
+					{
+						if (!spaceDown)
+						{
+							spaceDown = true;
+							player.start(tracks, 240.0);
+						}
+					}
+					break;
+				}
+			}
+			return 0;
+			case WM_KEYUP:
+			{
+				switch (wParam)
+				{
+					case VK_SPACE:
+					{
+						if (spaceDown)
+						{
+							spaceDown = false;
+							player.stop();
+						}
+					}
+					break;
+				}
+			}
+			return 0;
+		}
+		return DefWindowProcW(*this, msg, wParam, lParam);
+	}
+};
 
-		bool spaceDown = false;
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+{
+	try
+	{
+		if (FAILED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
+			throw std::runtime_error("Failed to initialise COM");
+		Defer d([](){ CoUninitialize(); });
+
 		// while (w.exists())
 		// {
 		// 	// for (auto wke = w.keyboard.getEvent(); wke.type != WKET_INVALID; wke = w.keyboard.getEvent())
@@ -98,6 +149,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		// 	// w.dv2.presentNoSync();
 		// 	w.update();
 		// }
+		
+		TestWindow w;
+		while (w)
+		{
+			updateAllWindows();
+		}
 	}
 	catch (const std::exception& e)
 	{
