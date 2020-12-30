@@ -5,13 +5,14 @@ Wave::Wave(const char* file)
 	std::ifstream fs(file, std::ios_base::in | std::ios_base::binary);
 	auto readAndCheckId = [&](const char* id) -> bool {
 		const size_t sl = strlen(id);
+		bool ret = true;
 		for (size_t i = 0; i < sl; i++)
 		{
 			const int b = fs.get();
 			if (b == EOF) throw Exception("Unexpected end of file");
-			if (b != id[i]) return false;
+			if (b != id[i]) ret = false;
 		}
-		return true;
+		return ret;
 	};
 	auto readU32 = [&]() -> uint32_t {
 		uint32_t i = 0;

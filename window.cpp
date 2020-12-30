@@ -1,275 +1,236 @@
 #include "window.h"
 
-const Window::WndClass Window::wndClass;
+WindowClass defWindowClass(L"defWindowClass", (HBRUSH)COLOR_BACKGROUND, LoadCursorW(nullptr, IDC_ARROW));
 
-Window::WndClass::WndClass() noexcept
-	: succeeded(false)
-{
-	WNDCLASSEXW wndClass = {};
-	wndClass.cbSize = sizeof(wndClass);
-	wndClass.style = CS_OWNDC;
-	wndClass.lpfnWndProc = DV2SetupWndProc;
-	wndClass.hInstance = GetModuleHandleW(nullptr);
-	wndClass.hCursor = LoadCursorW(nullptr, reinterpret_cast<const wchar_t*>(IDC_ARROW));
-	wndClass.lpszClassName = className;
-
-	/* RegisterClassExW() returnerar noll om den misslyckas, vilket konverteras till false.
-	   Andra värden konverteras till true. */
-	succeeded = RegisterClassExW(&wndClass);
-}
-
-Window::WndClass::~WndClass()
-{
-	if (succeeded) UnregisterClassW(className, GetModuleHandleW(nullptr));
-}
-
-void Window::Keyboard::addEvent(Event event) noexcept
-{
-	memmove(static_cast<void*>(&events[1]), static_cast<void*>(&events[0]), (events.size() - 1) * sizeof(events[0]));
-	events[0] = event;
-}
-
-Window::Keyboard::Event Window::Keyboard::getEvent() noexcept
-{
-	Event event = events[events.size() - 1];
-	memmove(static_cast<void*>(&events[1]), static_cast<void*>(&events[0]), (events.size() - 1) * sizeof(events[0]));
-	events[0] = Event();
-	return event;
-}
-
-constexpr bool Window::Keyboard::keyDown(uint8_t key) const
-{
-	if (key >= 0xff) throw Window::Exception("Keycode out of range");
-	return keyStates[key];
-}
-
-void Window::Mouse::addEvent(Event event) noexcept
-{
-	memmove(static_cast<void*>(&events[1]), static_cast<void*>(&events[0]), (events.size() - 1) * sizeof(events[0]));
-	events[0] = event;
-}
-
-Window::Mouse::Event Window::Mouse::getEvent() noexcept
-{
-	Event event = events[events.size() - 1];
-	memmove(static_cast<void*>(&events[1]), static_cast<void*>(&events[0]), (events.size() - 1) * sizeof(events[0]));
-	events[0] = Event();
-	return event;
-}
-
-inline HWND Window::createWindow(const wchar_t* title, int width, int height, bool resizeable)
-{
-	if (!wndClass.succeeded) throw Exception("Failed to register window class");
-
-	HWND hWnd = CreateWindowExW(
-		0,
-		WndClass::className,
-		title,
-		WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | (resizeable ? WS_THICKFRAME | WS_MAXIMIZEBOX : 0),
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		width,
-		height,
-		nullptr,
-		nullptr,
-		GetModuleHandleW(nullptr),
-		this
-	);
-	if (!hWnd) throw Exception("Failed to create window");
-
-	ShowWindow(hWnd, SW_SHOW);
-
-	return hWnd;
-}
-
-Window::Window(const wchar_t* title, int width, int height, bool resizeable)
-	: dv2Created(false),
-	  hWnd(createWindow(title, width, height, resizeable)),
-	  dv2(hWnd)
-{
-	dv2Created = true;
-}
-
-Window::~Window()
-{
-	if (IsWindow(hWnd)) DestroyWindow(hWnd);
-}
-
-void Window::update() noexcept
+void updateAllWindows()
 {
 	MSG msg;
-	while (PeekMessageW(&msg, hWnd, 0, 0, PM_REMOVE))
-	{
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
-	}
+	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw Window::Exception("Kunde inte hämta meddelande");
+	TranslateMessage(&msg);
+	DispatchMessageW(&msg);
 }
 
-void Window::updateBlocking() noexcept
+WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor)
+	: className(std::move(className)),
+	  registered(false)
 {
-	MSG msg;
-	if (GetMessageW(&msg, hWnd, 0, 0) > 0)
-	{
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
-	}
+	WNDCLASSEXW wc{};
+	wc.cbSize = sizeof(wc);
+	wc.lpfnWndProc = &Window::WindowProc;
+	wc.hInstance = GetModuleHandleW(nullptr);
+	wc.lpszClassName = this->className.c_str();
+	wc.hbrBackground = backgroundColour + 1;
+	wc.hCursor = cursor;
+
+	registered = RegisterClassExW(&wc);
 }
 
-LRESULT Window::wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+WindowClass::~WindowClass()
 {
-	static short captureCount = 0;
+	if (registered) UnregisterClassW(className.c_str(), GetModuleHandleW(nullptr));
+}
 
-	switch (msg)
+LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (msg == WM_CREATE)
 	{
-		case WM_KEYDOWN:
-		{
-			if (wParam >= keyboard.keyStates.size()) return DefWindowProcW(hWnd, msg, wParam, lParam);
+		SetLastError(0);
+		if (!SetWindowLongPtrW(
+			hWnd,
+			GWLP_USERDATA,
+			(long long)reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams
+		) && GetLastError()) return -1;
+		return 0;
+	}
 
-			keyboard.keyStates[wParam] = true;
-			keyboard.addEvent(Keyboard::Event(wParam, WKET_KEYDOWN));
-		}
-		return 0;
-		case WM_KEYUP:
+	Window* const window = reinterpret_cast<Window*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+	if (window)
+	{
+		switch (msg)
 		{
-			if (wParam >= keyboard.keyStates.size()) return DefWindowProcW(hWnd, msg, wParam, lParam);
+			case WM_CLOSE:
+			{
+				window->hWnd = nullptr;
+			}
+			return 0;
+			case WM_DESTROY:
+			{
+				/* Om fönstret har förstörts av något annat än window->hWnd:s destruktor så
+				   ser det här till att destruktorn inte också gör det. (Annars gör det här
+				   ingen skillnad.) */
+				window->hWnd.resetNoClose();
+			}
+			return 0;
+		}
 
-			keyboard.keyStates[wParam] = false;
-			keyboard.addEvent(Keyboard::Event(wParam, WKET_KEYUP));
-		}
-		return 0;
-		case WM_CHAR:
-		{
-			keyboard.addEvent(Keyboard::Event(wParam));
-		}
-		return 0;
-		case WM_KILLFOCUS:
-		{
-			keyboard.clearKeyStates();
-			keyboard.clearEvents();
-		}
-		return 0;
-		case WM_MOUSEMOVE:
-		{
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-		}
-		return 0;
-		case WM_LBUTTONDOWN:
-		{
-			if (captureCount++ == 0) SetCapture(hWnd);
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_LMOUSEDOWN));
-		}
-		return 0;
-		case WM_LBUTTONUP:
-		{
-			if (--captureCount == 0) ReleaseCapture();
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_LMOUSEUP));
-		}
-		return 0;
-		case WM_RBUTTONDOWN:
-		{
-			if (captureCount++ == 0) SetCapture(hWnd);
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_RMOUSEDOWN));
-		}
-		return 0;
-		case WM_RBUTTONUP:
-		{
-			if (--captureCount == 0) ReleaseCapture();
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_RMOUSEUP));
-		}
-		return 0;
-		case WM_MBUTTONDOWN:
-		{
-			if (captureCount++ == 0) SetCapture(hWnd);
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_MMOUSEDOWN));
-		}
-		return 0;
-		case WM_MBUTTONUP:
-		{
-			if (--captureCount == 0) ReleaseCapture();
-			mouse.x = GET_X_LPARAM(lParam);
-			mouse.y = GET_Y_LPARAM(lParam);
-			mouse.addEvent(Mouse::Event(mouse.x, mouse.y, WMET_MMOUSEUP));
-		}
-		return 0;
-		case WM_MOUSEHWHEEL:
-		{
-			POINT clientPos = {0, 0};
-			if (ClientToScreen(hWnd, &clientPos))
-			{
-				mouse.x = GET_X_LPARAM(lParam) - clientPos.x;
-				mouse.y = GET_Y_LPARAM(lParam) - clientPos.y;
-				mouse.addEvent(Mouse::Event(mouse.x, mouse.y, GET_WHEEL_DELTA_WPARAM(wParam), WMET_HSCROLL));
-			}
-		}
-		return 0;
-		case WM_MOUSEWHEEL:
-		{
-			POINT clientPos = {0, 0};
-			if (ClientToScreen(hWnd, &clientPos))
-			{
-				mouse.x = GET_X_LPARAM(lParam) - clientPos.x;
-				mouse.y = GET_Y_LPARAM(lParam) - clientPos.y;
-				mouse.addEvent(Mouse::Event(mouse.x, mouse.y, GET_WHEEL_DELTA_WPARAM(wParam), WMET_VSCROLL));
-			}
-		}
-		return 0;
-		case WM_SIZE:
-		{
-			if (dv2Created)
-			{
-				try
-				{
-					dv2.resize();
-				}
-				catch (...)
-				{
-					DestroyWindow(hWnd);
-				}
-			}
-		}
-		return 0;
+		return window->wndProc(msg, wParam, lParam);
 	}
 	return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
-LRESULT CALLBACK Window::DV2SetupWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+Window::Window(
+	const WindowClass& wc,
+	DWORD style,
+	DWORD exStyle,
+	const wchar_t* name,
+	HWND parent,
+	int width,
+	int height
+)
 {
-	if (msg != WM_CREATE) return DefWindowProcW(hWnd, msg, wParam, lParam);
-
-	SetLastError(0);
-	if (!SetWindowLongPtrW(
-		hWnd,
-		GWLP_USERDATA,
-		reinterpret_cast<LONG_PTR>(reinterpret_cast<const CREATESTRUCTW* const>(lParam)->lpCreateParams)
-	) && GetLastError()) return -1;
-	if (!SetWindowLongPtrW(
-		hWnd,
-		GWLP_WNDPROC,
-		reinterpret_cast<LONG_PTR>(DV2WndProc)
-	) && GetLastError()) return -1;
-	return 0;
+	if (!wc.registered) throw Exception("Kunde inte registrera fönsterklass");
+	hWnd = CreateWindowExW(
+		exStyle,
+		wc.className.c_str(),
+		name,
+		style,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		width,
+		height,
+		parent,
+		nullptr,
+		GetModuleHandleW(nullptr),
+		this
+	);
+	if (!hWnd) throw Exception("Kunde inte skapa fönster");
+	ShowWindow(hWnd, SW_SHOW);
 }
 
-LRESULT CALLBACK Window::DV2WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+Window::Window(
+	const WindowClass& wc,
+	DWORD style,
+	DWORD exStyle,
+	const wchar_t* name,
+	Menu&& menu,
+	HWND parent,
+	int width,
+	int height
+)
 {
-	Window* const window = reinterpret_cast<Window* const>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
-	try
+	if (!wc.registered) throw Exception("Kunde inte registrera fönsterklass");
+	hWnd = CreateWindowExW(
+		exStyle,
+		wc.className.c_str(),
+		name,
+		style,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		width,
+		height,
+		parent,
+		menu.menu,
+		GetModuleHandleW(nullptr),
+		this
+	);
+	if (!hWnd) throw Exception("Kunde inte skapa fönster");
+	menu.menu.resetNoClose();
+	ShowWindow(hWnd, SW_SHOW);
+}
+
+void Window::update()
+{
+	MSG msg;
+	if (GetMessageW(&msg, hWnd, 0, 0) == -1) throw Exception("Kunde inte hämta meddelande");
+	TranslateMessage(&msg);
+	DispatchMessageW(&msg);
+}
+
+LRESULT Control::subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR idSubclass, DWORD_PTR refData)
+{
+	if (msg == WM_DESTROY)
 	{
-		return window->wndProc(hWnd, msg, wParam, lParam);
+		reinterpret_cast<Control*>(refData)->hWnd.resetNoClose();
+		return TRUE;
 	}
-	catch (...)
+	return reinterpret_cast<Control*>(refData)->proc(msg, wParam, lParam);
+}
+
+Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent)
+{
+	hWnd = CreateWindowExW(
+		exStyle,
+		wc,
+		name,
+		style ^ WS_VISIBLE ^ WS_CHILD,
+		0,
+		0,
+		0,
+		0,
+		parent,
+		nullptr,
+		GetModuleHandleW(nullptr),
+		nullptr
+	);
+	if (!hWnd) throw Exception("Kunde inte skapa kontroll");
+
+	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
+		throw Exception("Kunde inte ändra kontrollens fönsterunderklass");
+}
+
+std::wstring Control::getText()
+{
+	std::wstring s;
+	const size_t size = SendMessageW(*this, WM_GETTEXTLENGTH, 0, 0) + 1;
+	if (size != 1)
 	{
-		return DefWindowProcW(hWnd, msg, wParam, lParam);
+		s.resize(size);
+		s.resize(SendMessageW(*this, WM_GETTEXT, s.size(), reinterpret_cast<LPARAM>(&s[0])));
+	}
+	return s;
+}
+
+uint32_t IpAddress::getAddress()
+{
+	uint32_t addr = 0;
+	SendMessageW(*this, IPM_GETADDRESS, 0, reinterpret_cast<LPARAM>(&addr));
+	return addr;
+}
+
+void UpDown::setRange(int min, int max)
+{
+	SendMessageW(*this, UDM_SETRANGE32, min, max);
+}
+
+UpDown::UpDown(DWORD style, DWORD exStyle, HWND buddy, HWND parent)
+	: UpDown(style, exStyle, parent)
+{
+	SendMessageW(*this, UDM_SETBUDDY, reinterpret_cast<WPARAM>(buddy), 0);
+}
+
+int UpDown::getValue()
+{
+	BOOL success = false;
+	int ret = SendMessageW(*this, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&success));
+	if (success) throw Exception("Kunde inte hämta värde från nummerinmatare");
+	return ret;
+}
+
+Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
+	: menu(CreateMenu())
+{
+	if (!menu) throw Exception("Kunde inte skapa meny");
+
+	for (auto& e : elements)
+	{
+		if (std::holds_alternative<MenuItem>(e))
+		{
+			if (!AppendMenuW(
+				menu,
+				MF_STRING,
+				std::get<MenuItem>(e).second,
+				std::get<MenuItem>(e).first.c_str()
+			)) throw Exception("Kunde inte lägga till menypunkt");
+		}
+		else if (std::holds_alternative<SubMenu>(e))
+		{
+			if (!AppendMenuW(
+				menu,
+				MF_POPUP,
+				(UINT_PTR)(HMENU)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu,
+				std::get<SubMenu>(e).first.c_str()
+			)) throw Exception("Kunde inte lägga till menypunkt");
+			const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.resetNoClose();
+		}
 	}
 }

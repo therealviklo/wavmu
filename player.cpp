@@ -1,14 +1,5 @@
 ﻿#include "player.h"
 
-template <class T>
-void voiceDeleter(T* voice)
-{
-	if (voice)
-	{
-		voice->DestroyVoice();
-	}
-}
-
 void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
 {
 	try
@@ -104,8 +95,8 @@ void Player::stopVoice()
 
 Player::Player()
 	: running(true),
-	  masteringVoice(nullptr, &voiceDeleter<IXAudio2MasteringVoice>),
-	  sourceVoice(nullptr, &voiceDeleter<IXAudio2SourceVoice>),
+	  masteringVoice(nullptr),
+	  sourceVoice(nullptr),
 	  currBuf(0),
 	  callback(this)
 {
@@ -115,7 +106,7 @@ Player::Player()
 	IXAudio2MasteringVoice* tempMasteringVoice = nullptr;
 	if (FAILED(xa2->CreateMasteringVoice(&tempMasteringVoice)))
 		throw Exception("Failed to create mastering voice");
-	decltype(masteringVoice) tempMasteringVoice2(tempMasteringVoice, &voiceDeleter<IXAudio2MasteringVoice>);
+	decltype(masteringVoice) tempMasteringVoice2(tempMasteringVoice);
 	tempMasteringVoice2.swap(masteringVoice);
 
 	WAVEFORMATEX wf{};
@@ -128,7 +119,7 @@ Player::Player()
 	IXAudio2SourceVoice* tempSourceVoice = nullptr;
 	if (FAILED(xa2->CreateSourceVoice(&tempSourceVoice, &wf, 0, 2.0f, &callback)))
 		throw Exception("Failed to create source voice");
-	decltype(sourceVoice) tempSourceVoice2(tempSourceVoice, &voiceDeleter<IXAudio2SourceVoice>);
+	decltype(sourceVoice) tempSourceVoice2(tempSourceVoice);
 	tempSourceVoice2.swap(sourceVoice);
 
 	startVoice();

@@ -26,7 +26,7 @@ struct Tracks
 class PlayState
 {
 public:
-	class AlreadyPlayingException : std::runtime_error
+	class AlreadyPlayingException : public std::runtime_error
 	{
 	public:
 		AlreadyPlayingException() : std::runtime_error("Song is already playing") {}

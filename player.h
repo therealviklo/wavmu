@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <thread>
 #include <mutex>
+#include "utils.h"
 #include <xaudio2.h>
 #include <wrl.h>
 #include <stdexcept>
@@ -12,15 +13,14 @@
 using Microsoft::WRL::ComPtr;
 
 template <class T>
-void voiceDeleter(T* voice);
+void voiceDeleter(T* voice)
+{
+	voice->DestroyVoice();
+}
 
 class Player
 {
-	class Exception : public std::runtime_error
-	{
-	public:
-		Exception(const char* msg) : std::runtime_error(msg) {}
-	};
+	EXCEPT(Exception)
 private:
 	std::mutex runningMutex;
 	bool running;
@@ -34,8 +34,8 @@ private:
 
 	std::mutex comMutex;
 	ComPtr<IXAudio2> xa2;
-	std::unique_ptr<IXAudio2MasteringVoice, decltype(&voiceDeleter<IXAudio2MasteringVoice>)> masteringVoice;
-	std::unique_ptr<IXAudio2SourceVoice, decltype(&voiceDeleter<IXAudio2SourceVoice>)> sourceVoice;
+	UHandle<IXAudio2MasteringVoice*, voiceDeleter<IXAudio2MasteringVoice>> masteringVoice;
+	UHandle<IXAudio2SourceVoice*, voiceDeleter<IXAudio2SourceVoice>> sourceVoice;
 
 	Sample bufs[8][256];
 	uint8_t currBuf;

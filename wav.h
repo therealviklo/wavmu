@@ -4,16 +4,13 @@
 #include <fstream>
 #include <stdexcept>
 #include <cmath>
+#include "utils.h"
 
 typedef int32_t Sample;
 
 class Wave
 {
-	class Exception : public std::runtime_error
-	{
-	public:
-		Exception(const char* msg) : std::runtime_error(msg) {}
-	};
+	EXCEPT(Exception)
 private:
 	struct {
 		uint16_t channels;

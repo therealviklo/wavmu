@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 typedef uint8_t Tone;
 typedef double BPM;
