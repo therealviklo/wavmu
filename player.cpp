@@ -13,10 +13,7 @@ void Player::loop()
 		{
 			playingSemaphore.acquire();
 
-			{
-				const std::lock_guard<std::mutex> lg(runningMutex);
-				if (!running) break;
-			}
+			if (!running.load(std::memory_order_relaxed)) break;
 
 			{
 				std::unique_lock<std::mutex> ul(playStateMutex);
@@ -26,10 +23,7 @@ void Player::loop()
 					
 					while (true)
 					{
-						{
-							const std::lock_guard<std::mutex> lg(runningMutex);
-							if (!running) break;
-						}
+						if (!running.load(std::memory_order_relaxed)) break;
 						{
 							const std::lock_guard<std::mutex> lg(comMutex);
 							XAUDIO2_VOICE_STATE state;
@@ -131,15 +125,7 @@ Player::~Player()
 	} catch (...) {}
 	try
 	{
-		try
-		{
-			const std::lock_guard<std::mutex> lg(runningMutex);
-			running = false;
-		}
-		catch (...)
-		{
-			running = false;
-		}
+		running.store(false, std::memory_order_relaxed);
 		playingSemaphore.tryRelease();
 		playerThread.join();
 	} catch (...) {}

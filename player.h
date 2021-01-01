@@ -24,8 +24,7 @@ class Player
 public:
 	EXCEPT(Exception)
 private:
-	std::mutex runningMutex;
-	bool running;
+	std::atomic<bool> running;
 
 	std::thread playerThread;
 
