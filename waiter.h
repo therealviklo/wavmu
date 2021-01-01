@@ -43,9 +43,9 @@ public:
 		throw std::runtime_error("failed to acquire semaphore");
 	}
 
-	void release()
+	void release(long count = 1)
 	{
-		if (!ReleaseSemaphore(*this, 1, nullptr))
+		if (!ReleaseSemaphore(*this, count, nullptr))
 			throw std::runtime_error("failed to release semaphore");
 	}
 };
