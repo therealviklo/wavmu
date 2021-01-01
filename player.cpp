@@ -2,22 +2,16 @@
 
 void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
 {
-	try
-	{
-		/* Vanligtvis borde player->playingWaiterMutex låsas men man ska tydligen
-		   inte göra någon trådsynkronisering i en XAudio2-callback. */
-		player->playingWaiter.notify_all();
-	} catch (...) {}
+	player->playingSemaphore.tryRelease();
 }
 
 void Player::loop()
 {
 	try
 	{
-		std::unique_lock<std::mutex> pwul(playingWaiterMutex);
 		while (true)
 		{
-			playingWaiter.wait(pwul);
+			playingSemaphore.acquire();
 
 			{
 				const std::lock_guard<std::mutex> lg(runningMutex);
@@ -95,6 +89,7 @@ void Player::stopVoice()
 
 Player::Player()
 	: running(true),
+	  playingSemaphore(1),
 	  masteringVoice(nullptr),
 	  sourceVoice(nullptr),
 	  currBuf(0),
@@ -145,11 +140,7 @@ Player::~Player()
 		{
 			running = false;
 		}
-		try
-		{
-			const std::lock_guard<std::mutex> lg(playingWaiterMutex);
-			playingWaiter.notify_all();
-		} catch (...) {}
+		playingSemaphore.tryRelease();
 		playerThread.join();
 	} catch (...) {}
 }
@@ -161,10 +152,7 @@ void Player::start(Tracks& tracks, BPM bpm)
 		playState = nullptr;
 		playState = std::make_unique<PlayState>(tracks, bpm);
 	}
-	{
-		const std::lock_guard<std::mutex> lg(playingWaiterMutex);
-		playingWaiter.notify_all();
-	}
+	playingSemaphore.tryRelease();
 }
 
 void Player::stop()

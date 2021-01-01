@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include "wav.h"
 #include "track.h"
+#include "waiter.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -20,6 +21,7 @@ void voiceDeleter(T* voice)
 
 class Player
 {
+public:
 	EXCEPT(Exception)
 private:
 	std::mutex runningMutex;
@@ -27,8 +29,7 @@ private:
 
 	std::thread playerThread;
 
-	std::mutex playingWaiterMutex;
-	std::condition_variable playingWaiter;
+	Semaphore playingSemaphore;
 	std::mutex playStateMutex;
 	std::unique_ptr<PlayState> playState;
 

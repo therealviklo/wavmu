@@ -48,4 +48,9 @@ public:
 		if (!ReleaseSemaphore(*this, count, nullptr))
 			throw std::runtime_error("failed to release semaphore");
 	}
+
+	void tryRelease() noexcept
+	{
+		ReleaseSemaphore(*this, 1, nullptr);
+	}
 };
