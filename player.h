@@ -9,7 +9,7 @@
 #include <condition_variable>
 #include "wav.h"
 #include "track.h"
-#include "waiter.h"
+#include "threadutils.h"
 
 using Microsoft::WRL::ComPtr;
 
