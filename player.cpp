@@ -19,8 +19,6 @@ void Player::loop()
 				std::unique_lock<std::mutex> ul(playStateMutex);
 				if (playState)
 				{
-					ul.unlock();
-					
 					while (true)
 					{
 						if (!running.load(std::memory_order_relaxed)) break;
@@ -31,14 +29,11 @@ void Player::loop()
 							if (state.BuffersQueued >= sizeof(bufs) / sizeof(*bufs)) break;
 						}
 
+						for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]) / 2; i++)
 						{
-							const std::lock_guard<std::mutex> lg(playStateMutex);
-							for (size_t i = 0; i < sizeof(bufs[currBuf]) / sizeof(*bufs[currBuf]) / 2; i++)
-							{
-								auto samples = playState->get(44100);
-								bufs[currBuf][2 * i] = samples.samples[0];
-								bufs[currBuf][2 * i + 1] = samples.samples[1];
-							}
+							auto samples = playState->get(44100);
+							bufs[currBuf][2 * i] = samples.samples[0];
+							bufs[currBuf][2 * i + 1] = samples.samples[1];
 						}
 
 						{
