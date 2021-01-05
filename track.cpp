@@ -9,7 +9,7 @@ PlayState::PlayState(Tracks& tracks, BPM bpm)
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
 	
 	// Försök att låsa "playing"-mutexen och swappa in den i playingLock.
-	std::unique_lock<std::mutex> tmpUl(tracks.playingMutex, std::defer_lock);
+	std::unique_lock<AtomicFlagLock<true>> tmpUl(tracks.playing, std::defer_lock);
 	if (!tmpUl.try_lock()) throw AlreadyPlayingException();
 	playingLock.swap(tmpUl);
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include "instrument.h"
+#include "threadutils.h"
 
 struct Track
 {
@@ -19,7 +20,7 @@ struct Tracks
 	// För att få tillgång till datan.
 	std::mutex mtx;
 	// Vissa saker ska inte göras när noterna spelas upp. Denna mutex är låst då.
-	std::mutex playingMutex;
+	AtomicFlagLock<true> playing;
 	std::vector<Track> data;
 };
 
@@ -47,7 +48,7 @@ public:
 		Sample samples[2];
 	};
 private:
-	std::unique_lock<std::mutex> playingLock;
+	std::unique_lock<AtomicFlagLock<true>> playingLock;
 	double position;
 	Tracks& tracks;
 	std::vector<std::vector<SectionPlayState>> trackIterators;

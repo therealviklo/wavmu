@@ -1,6 +1,4 @@
 ﻿#pragma once
-#include <mutex>
-#include <condition_variable>
 #include <atomic>
 #include "utils.h"
 
@@ -52,5 +50,45 @@ public:
 	void tryRelease() noexcept
 	{
 		ReleaseSemaphore(*this, 1, nullptr);
+	}
+};
+
+template <bool relaxed = false>
+class AtomicFlagLock : public std::atomic_flag
+{
+public:
+	EXCEPT(AlreadyLocked)
+
+	AtomicFlagLock()
+		: std::atomic_flag{} {}
+
+	void lock()
+	{
+		if constexpr (relaxed)
+		{
+			if (test_and_set(std::memory_order_relaxed))
+				throw AlreadyLocked("Lock is already locked");
+		}
+		else
+		{
+			if (test_and_set())
+				throw AlreadyLocked("Lock is already locked");
+		}
+	}
+
+	bool try_lock() noexcept
+	{
+		if constexpr (relaxed)
+			return !test_and_set(std::memory_order_relaxed);
+		else
+			return !test_and_set();
+	}
+
+	void unlock() noexcept
+	{
+		if constexpr (relaxed)
+			clear(std::memory_order_relaxed);
+		else
+			clear();
 	}
 };
