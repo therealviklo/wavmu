@@ -28,7 +28,7 @@ private:
 
 	std::thread playerThread;
 
-	Semaphore playingSemaphore;
+	Waiter playingWaiter;
 	std::mutex playStateMutex;
 	std::unique_ptr<PlayState> playState;
 

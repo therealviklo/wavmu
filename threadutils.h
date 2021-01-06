@@ -2,54 +2,76 @@
 #include <atomic>
 #include "utils.h"
 
-class Semaphore : private UHandle<HANDLE, &CloseHandle>
+// class Semaphore : private UHandle<HANDLE, &CloseHandle>
+// {
+// public:
+// 	Semaphore(long max, long initialCount = 0)
+// 		: UHandle<HANDLE, &CloseHandle>(
+// 			CreateSemaphoreW(
+// 				nullptr,
+// 				initialCount,
+// 				max,
+// 				nullptr
+// 			)
+// 		  )
+// 	{
+// 		if (!*this)
+// 			throw std::runtime_error("failed to create semaphore");
+// 	}
+
+// 	~Semaphore()
+// 	{
+// 		while (ReleaseSemaphore(*this, 1, nullptr));
+// 	}
+
+// 	void acquire()
+// 	{
+// 		if (WaitForSingleObject(*this, INFINITE) != WAIT_OBJECT_0)
+// 			throw std::runtime_error("failed to acquire semaphore");
+// 	}
+
+// 	bool tryAcquire()
+// 	{
+// 		const auto r = WaitForSingleObject(*this, 0);
+// 		switch (r)
+// 		{
+// 			case WAIT_OBJECT_0: return true;
+// 			case WAIT_TIMEOUT: return false;
+// 		}
+// 		throw std::runtime_error("failed to acquire semaphore");
+// 	}
+
+// 	void release(long count = 1)
+// 	{
+// 		if (!ReleaseSemaphore(*this, count, nullptr))
+// 			throw std::runtime_error("failed to release semaphore");
+// 	}
+
+// 	void tryRelease() noexcept
+// 	{
+// 		ReleaseSemaphore(*this, 1, nullptr);
+// 	}
+// };
+
+class Waiter
 {
+private:
+	std::atomic_unsigned_lock_free a;
 public:
-	Semaphore(long max, long initialCount = 0)
-		: UHandle<HANDLE, &CloseHandle>(
-			CreateSemaphoreW(
-				nullptr,
-				initialCount,
-				max,
-				nullptr
-			)
-		  )
-	{
-		if (!*this)
-			throw std::runtime_error("failed to create semaphore");
-	}
+	Waiter() noexcept : a(0) {}
 
-	~Semaphore()
+	void wait() noexcept
 	{
-		while (ReleaseSemaphore(*this, 1, nullptr));
-	}
-
-	void acquire()
-	{
-		if (WaitForSingleObject(*this, INFINITE) != WAIT_OBJECT_0)
-			throw std::runtime_error("failed to acquire semaphore");
-	}
-
-	bool tryAcquire()
-	{
-		const auto r = WaitForSingleObject(*this, 0);
-		switch (r)
+		while (!a.exchange(0, std::memory_order_acquire))
 		{
-			case WAIT_OBJECT_0: return true;
-			case WAIT_TIMEOUT: return false;
+			a.wait(0, std::memory_order_relaxed);
 		}
-		throw std::runtime_error("failed to acquire semaphore");
 	}
 
-	void release(long count = 1)
+	void requestWakeup() noexcept
 	{
-		if (!ReleaseSemaphore(*this, count, nullptr))
-			throw std::runtime_error("failed to release semaphore");
-	}
-
-	void tryRelease() noexcept
-	{
-		ReleaseSemaphore(*this, 1, nullptr);
+		a.store(1, std::memory_order_release);
+		a.notify_one();
 	}
 };
 

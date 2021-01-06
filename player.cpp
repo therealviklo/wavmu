@@ -2,7 +2,7 @@
 
 void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
 {
-	player->playingSemaphore.tryRelease();
+	player->playingWaiter.requestWakeup();
 }
 
 void Player::loop()
@@ -11,7 +11,7 @@ void Player::loop()
 	{
 		while (true)
 		{
-			playingSemaphore.acquire();
+			playingWaiter.wait();
 
 			if (!running.load(std::memory_order_relaxed)) break;
 
@@ -78,7 +78,6 @@ void Player::stopVoice()
 
 Player::Player()
 	: running(true),
-	  playingSemaphore(1),
 	  masteringVoice(nullptr),
 	  sourceVoice(nullptr),
 	  currBuf(0),
@@ -121,7 +120,7 @@ Player::~Player()
 	try
 	{
 		running.store(false, std::memory_order_relaxed);
-		playingSemaphore.tryRelease();
+		playingWaiter.requestWakeup();
 		playerThread.join();
 	} catch (...) {}
 }
@@ -133,7 +132,7 @@ void Player::start(Tracks& tracks, BPM bpm)
 		playState = nullptr;
 		playState = std::make_unique<PlayState>(tracks, bpm);
 	}
-	playingSemaphore.tryRelease();
+	playingWaiter.requestWakeup();
 }
 
 void Player::stop()
