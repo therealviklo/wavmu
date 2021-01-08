@@ -5,7 +5,7 @@ WindowClass defWindowClass(L"defWindowClass", (HBRUSH)COLOR_BACKGROUND, LoadCurs
 void updateAllWindows()
 {
 	MSG msg;
-	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw Window::Exception("Kunde inte hämta meddelande");
+	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw Window::Exception("Failed to get message");
 	TranslateMessage(&msg);
 	DispatchMessageW(&msg);
 }
@@ -78,7 +78,7 @@ Window::Window(
 	int height
 )
 {
-	if (!wc.registered) throw Exception("Kunde inte registrera fönsterklass");
+	if (!wc.registered) throw Exception("Failed to register window class");
 	hWnd = CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
@@ -93,7 +93,7 @@ Window::Window(
 		GetModuleHandleW(nullptr),
 		this
 	);
-	if (!hWnd) throw Exception("Kunde inte skapa fönster");
+	if (!hWnd) throw Exception("Failed to create window");
 	ShowWindow(hWnd, SW_SHOW);
 }
 
@@ -108,7 +108,7 @@ Window::Window(
 	int height
 )
 {
-	if (!wc.registered) throw Exception("Kunde inte registrera fönsterklass");
+	if (!wc.registered) throw Exception("Failed to register window class");
 	hWnd = CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
@@ -123,7 +123,7 @@ Window::Window(
 		GetModuleHandleW(nullptr),
 		this
 	);
-	if (!hWnd) throw Exception("Kunde inte skapa fönster");
+	if (!hWnd) throw Exception("Failed to create window");
 	menu.menu.resetNoClose();
 	ShowWindow(hWnd, SW_SHOW);
 }
@@ -131,7 +131,7 @@ Window::Window(
 void Window::update()
 {
 	MSG msg;
-	if (GetMessageW(&msg, hWnd, 0, 0) == -1) throw Exception("Kunde inte hämta meddelande");
+	if (GetMessageW(&msg, hWnd, 0, 0) == -1) throw Exception("Failed to get message");
 	TranslateMessage(&msg);
 	DispatchMessageW(&msg);
 }
@@ -162,10 +162,10 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 		GetModuleHandleW(nullptr),
 		nullptr
 	);
-	if (!hWnd) throw Exception("Kunde inte skapa kontroll");
+	if (!hWnd) throw Exception("Failed to create control");
 
 	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
-		throw Exception("Kunde inte ändra kontrollens fönsterunderklass");
+		throw Exception("Failed to change the control's window subclass");
 }
 
 std::wstring Control::getText()
@@ -202,14 +202,14 @@ int UpDown::getValue()
 {
 	BOOL success = false;
 	int ret = SendMessageW(*this, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&success));
-	if (success) throw Exception("Kunde inte hämta värde från nummerinmatare");
+	if (success) throw Exception("Failed to get value from number entry box");
 	return ret;
 }
 
 Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
 	: menu(CreateMenu())
 {
-	if (!menu) throw Exception("Kunde inte skapa meny");
+	if (!menu) throw Exception("Failed to create menu");
 
 	for (auto& e : elements)
 	{
@@ -220,7 +220,7 @@ Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
 				MF_STRING,
 				std::get<MenuItem>(e).second,
 				std::get<MenuItem>(e).first.c_str()
-			)) throw Exception("Kunde inte lägga till menypunkt");
+			)) throw Exception("Failed to create meny item");
 		}
 		else if (std::holds_alternative<SubMenu>(e))
 		{
@@ -229,7 +229,7 @@ Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
 				MF_POPUP,
 				(UINT_PTR)(HMENU)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu,
 				std::get<SubMenu>(e).first.c_str()
-			)) throw Exception("Kunde inte lägga till menypunkt");
+			)) throw Exception("Failed to create meny item");
 			const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.resetNoClose();
 		}
 	}
