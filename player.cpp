@@ -129,7 +129,7 @@ void Player::start(Tracks& tracks, BPM bpm)
 {
 	{
 		const std::lock_guard<std::mutex> lg(playStateMutex);
-		playState = nullptr;
+		playState.reset();
 		playState = std::make_unique<PlayState>(tracks, bpm);
 	}
 	playingWaiter.requestWakeup();
@@ -139,7 +139,7 @@ void Player::stop()
 {
 	{
 		const std::lock_guard<std::mutex> lg(playStateMutex);
-		playState = nullptr;
+		playState.reset();
 	}
 	{
 		const std::lock_guard<std::mutex> lg(comMutex);
