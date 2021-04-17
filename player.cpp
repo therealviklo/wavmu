@@ -1,6 +1,6 @@
 ﻿#include "player.h"
 
-void Player::Callback::OnBufferEnd(void* bufferContext) noexcept
+void Player::Callback::OnBufferEnd(void* /*bufferContext*/) noexcept
 {
 	player->playingWaiter.requestWakeup();
 }

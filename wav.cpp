@@ -52,8 +52,8 @@ Wave::Wave(const char* file)
 	info.channels = readU16();
 	if (info.channels != 2 && info.channels != 1) throw Exception("Unsupported number of channels");
 	info.sampleRate = readU32();
-	uint32_t byteRate = readU32();
-	uint32_t blockAlign = readU16();
+	readU32(); // byteRate
+	readU16(); // blockAlign
 	uint32_t bitsPerSample = readU16();
 	if (bitsPerSample != 8 &&
 		bitsPerSample != 16 &&
@@ -81,7 +81,7 @@ Wave::Wave(const char* file)
 	};
 	auto readSample8bit = [&]() -> Sample { // Om bitdjupet är 8 bitar så blir det lite speciellt.
 		uint32_t n = fs.get();
-		if (n == EOF) throw Exception("Unexpected end of file");
+		if (n == (uint32_t)EOF) throw Exception("Unexpected end of file");
 
 		if (n & (1 << 7))
 		{

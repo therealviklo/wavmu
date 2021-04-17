@@ -116,13 +116,29 @@ public:
 	}
 };
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+class ComHandler
 {
-	try
+public:
+	ComHandler()
 	{
 		if (FAILED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
 			throw std::runtime_error("Failed to initialise COM");
-		Defer d([](){ CoUninitialize(); });
+	}
+
+	~ComHandler()
+	{
+		CoUninitialize();
+	}
+
+	ComHandler(const ComHandler&) = delete;
+	ComHandler& operator=(const ComHandler&) = delete;
+};
+
+int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, PWSTR /*pCmdLine*/, int /*nCmdShow*/)
+{
+	try
+	{
+		ComHandler ch;
 
 		// while (w.exists())
 		// {

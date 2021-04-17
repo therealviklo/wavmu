@@ -1,1 +1,1 @@
-﻿@vmake -b clang++ NAMN -o wavmu.exe -O2 -luser32 -lcomctl32 -mwindows -std=c++20
+﻿@vmake -b -o wavmu.exe -L -luser32 -L -lcomctl32 -L -mwindows clang++ -O2 -std=c++20 -Wall -Wextra

@@ -56,7 +56,7 @@
 class Waiter
 {
 private:
-	std::atomic_unsigned_lock_free a;
+	std::atomic_uintptr_t a;
 public:
 	Waiter() noexcept : a(0) {}
 

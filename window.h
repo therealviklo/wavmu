@@ -66,13 +66,13 @@ public:
 
 	/* En virtuell funktion som får parametrarna från den "riktiga" WndProc:en. Det är meningen att underklasserna
 	   ska överskrida den här funktionen. */
-	virtual LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam) { return DefWindowProcW(hWnd, msg, wParam, lParam); }
+	virtual LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam) { return DefWindowProcW(hWnd.get(), msg, wParam, lParam); }
 
 	// Kör den här för att få fönstret att uppdatera. (Annars fryser det.)
 	void update();
 
-	constexpr operator HWND() noexcept { return hWnd; }
-	constexpr operator bool() const noexcept { return hWnd; }
+	constexpr operator HWND() noexcept { return hWnd.get(); }
+	constexpr operator bool() const noexcept { return (bool)hWnd; }
 };
 
 class Control
@@ -91,8 +91,8 @@ public:
 
 	std::wstring getText();
 
-	constexpr operator HWND() noexcept { return hWnd; }
-	constexpr operator bool() const noexcept { return hWnd; }
+	constexpr operator HWND() noexcept { return hWnd.get(); }
+	constexpr operator bool() const noexcept { return (bool)hWnd; }
 };
 
 class EditControl : public Control

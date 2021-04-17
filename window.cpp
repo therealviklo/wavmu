@@ -58,7 +58,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 				/* Om fönstret har förstörts av något annat än window->hWnd:s destruktor så
 				   ser det här till att destruktorn inte också gör det. (Annars gör det här
 				   ingen skillnad.) */
-				window->hWnd.resetNoClose();
+				(void)window->hWnd.release();
 			}
 			return 0;
 		}
@@ -79,7 +79,7 @@ Window::Window(
 )
 {
 	if (!wc.registered) throw Exception("Failed to register window class");
-	hWnd = CreateWindowExW(
+	hWnd.reset(CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
 		name,
@@ -92,9 +92,9 @@ Window::Window(
 		nullptr,
 		GetModuleHandleW(nullptr),
 		this
-	);
+	));
 	if (!hWnd) throw Exception("Failed to create window");
-	ShowWindow(hWnd, SW_SHOW);
+	ShowWindow(hWnd.get(), SW_SHOW);
 }
 
 Window::Window(
@@ -109,7 +109,7 @@ Window::Window(
 )
 {
 	if (!wc.registered) throw Exception("Failed to register window class");
-	hWnd = CreateWindowExW(
+	hWnd.reset(CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
 		name,
@@ -119,28 +119,28 @@ Window::Window(
 		width,
 		height,
 		parent,
-		menu.menu,
+		menu.menu.get(),
 		GetModuleHandleW(nullptr),
 		this
-	);
+	));
 	if (!hWnd) throw Exception("Failed to create window");
-	menu.menu.resetNoClose();
-	ShowWindow(hWnd, SW_SHOW);
+	(void)menu.menu.release();
+	ShowWindow(hWnd.get(), SW_SHOW);
 }
 
 void Window::update()
 {
 	MSG msg;
-	if (GetMessageW(&msg, hWnd, 0, 0) == -1) throw Exception("Failed to get message");
+	if (GetMessageW(&msg, hWnd.get(), 0, 0) == -1) throw Exception("Failed to get message");
 	TranslateMessage(&msg);
 	DispatchMessageW(&msg);
 }
 
-LRESULT Control::subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR idSubclass, DWORD_PTR refData)
+LRESULT Control::subclassProc(HWND /*hWnd*/, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR /*idSubclass*/, DWORD_PTR refData)
 {
 	if (msg == WM_DESTROY)
 	{
-		reinterpret_cast<Control*>(refData)->hWnd.resetNoClose();
+		(void)reinterpret_cast<Control*>(refData)->hWnd.release();
 		return TRUE;
 	}
 	return reinterpret_cast<Control*>(refData)->proc(msg, wParam, lParam);
@@ -148,7 +148,7 @@ LRESULT Control::subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam,
 
 Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent)
 {
-	hWnd = CreateWindowExW(
+	hWnd.reset(CreateWindowExW(
 		exStyle,
 		wc,
 		name,
@@ -161,10 +161,10 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 		nullptr,
 		GetModuleHandleW(nullptr),
 		nullptr
-	);
+	));
 	if (!hWnd) throw Exception("Failed to create control");
 
-	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
+	if (!SetWindowSubclass(hWnd.get(), subclassProc, 1, (DWORD_PTR)this))
 		throw Exception("Failed to change the control's window subclass");
 }
 
@@ -216,7 +216,7 @@ Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
 		if (std::holds_alternative<MenuItem>(e))
 		{
 			if (!AppendMenuW(
-				menu,
+				menu.get(),
 				MF_STRING,
 				std::get<MenuItem>(e).second,
 				std::get<MenuItem>(e).first.c_str()
@@ -225,12 +225,12 @@ Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
 		else if (std::holds_alternative<SubMenu>(e))
 		{
 			if (!AppendMenuW(
-				menu,
+				menu.get(),
 				MF_POPUP,
-				(UINT_PTR)(HMENU)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu,
+				(UINT_PTR)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.get(),
 				std::get<SubMenu>(e).first.c_str()
 			)) throw Exception("Failed to create meny item");
-			const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.resetNoClose();
+			(void)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.release();
 		}
 	}
 }

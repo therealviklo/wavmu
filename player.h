@@ -48,12 +48,12 @@ private:
 		Callback(Player* player) : player(player) {}
 
 		void OnBufferEnd(void* bufferContext) noexcept override;
-		void OnBufferStart(void* bufferContext) noexcept override {}
-		void OnLoopEnd(void* bufferContext) noexcept override {}
+		void OnBufferStart(void* /*bufferContext*/) noexcept override {}
+		void OnLoopEnd(void* /*bufferContext*/) noexcept override {}
 		void OnStreamEnd() noexcept override {}
-		void OnVoiceError(void* bufferContext, HRESULT error) noexcept override {}
+		void OnVoiceError(void* /*bufferContext*/, HRESULT /*error*/) noexcept override {}
 		void OnVoiceProcessingPassEnd() noexcept override {}
-		void OnVoiceProcessingPassStart(UINT32 bytesRequired) noexcept override {}
+		void OnVoiceProcessingPassStart(UINT32 /*bytesRequired*/) noexcept override {}
 	} callback;
 
 	void loop();
