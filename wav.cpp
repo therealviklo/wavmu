@@ -9,7 +9,7 @@ Wave::Wave(const char* file)
 		for (size_t i = 0; i < sl; i++)
 		{
 			const int b = fs.get();
-			if (b == EOF) throw Exception("Unexpected end of file");
+			if (b == EOF) throw WRE(L"Unexpected end of file");
 			if (b != id[i]) ret = false;
 		}
 		return ret;
@@ -19,7 +19,7 @@ Wave::Wave(const char* file)
 		for (uint8_t i = 0; i < sizeof(uint32_t); i++)
 		{
 			const int b = fs.get();
-			if (b == EOF) throw Exception("Unexpected end of file");
+			if (b == EOF) throw WRE(L"Unexpected end of file");
 			i += (b << (i * 8));
 		}
 		return i;
@@ -29,28 +29,28 @@ Wave::Wave(const char* file)
 		for (uint8_t i = 0; i < sizeof(uint16_t); i++)
 		{
 			const int b = fs.get();
-			if (b == EOF) throw Exception("Unexpected end of file");
+			if (b == EOF) throw WRE(L"Unexpected end of file");
 			i += (b << (i * 8));
 		}
 		return i;
 	};
 	auto skip = [&](size_t numBytes) -> void {
 		for (size_t i = 0; i < numBytes; i++)
-			if (fs.get() == EOF) throw Exception("Unexpected end of file");
+			if (fs.get() == EOF) throw WRE(L"Unexpected end of file");
 	};
 
-	if (!readAndCheckId("RIFF")) throw Exception("Unsupported format");
+	if (!readAndCheckId("RIFF")) throw WRE(L"Unsupported format");
 	readU32(); // Bryr mig inte om denna men den måste läsas.
-	if (!readAndCheckId("WAVE")) throw Exception("Unsupported format");
+	if (!readAndCheckId("WAVE")) throw WRE(L"Unsupported format");
 
 	// Skippar till "fmt "-headern.
 	while (!readAndCheckId("fmt ")) skip(readU32());
 
 	// Har redan läst in id:t.
-	if (readU32() != 16) throw Exception("Unsupported format"); // Storleken
-	if (readU16() != 1) throw Exception("Unsupported format"); // Formatet (ska vara PCM)
+	if (readU32() != 16) throw WRE(L"Unsupported format"); // Storleken
+	if (readU16() != 1) throw WRE(L"Unsupported format"); // Formatet (ska vara PCM)
 	info.channels = readU16();
-	if (info.channels != 2 && info.channels != 1) throw Exception("Unsupported number of channels");
+	if (info.channels != 2 && info.channels != 1) throw WRE(L"Unsupported number of channels");
 	info.sampleRate = readU32();
 	readU32(); // byteRate
 	readU16(); // blockAlign
@@ -58,14 +58,14 @@ Wave::Wave(const char* file)
 	if (bitsPerSample != 8 &&
 		bitsPerSample != 16 &&
 		bitsPerSample != 24 &&
-		bitsPerSample != 32) throw Exception("Unsupported bit depth");
+		bitsPerSample != 32) throw WRE(L"Unsupported bit depth");
 
 	auto readSample = [&]() -> Sample {
 		uint32_t n = 0;
 		for (size_t i = 0; i < bitsPerSample; i += 8)
 		{
 			const int b = fs.get();
-			if (b == EOF) throw Exception("Unexpected end of file");
+			if (b == EOF) throw WRE(L"Unexpected end of file");
 			n += (b << i);
 		}
 
@@ -81,7 +81,7 @@ Wave::Wave(const char* file)
 	};
 	auto readSample8bit = [&]() -> Sample { // Om bitdjupet är 8 bitar så blir det lite speciellt.
 		uint32_t n = fs.get();
-		if (n == (uint32_t)EOF) throw Exception("Unexpected end of file");
+		if (n == (uint32_t)EOF) throw WRE(L"Unexpected end of file");
 
 		if (n & (1 << 7))
 		{

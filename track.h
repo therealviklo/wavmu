@@ -27,10 +27,10 @@ struct Tracks
 class PlayState
 {
 public:
-	class AlreadyPlayingException : public std::runtime_error
+	class AlreadyPlayingException : public WRE
 	{
 	public:
-		AlreadyPlayingException() : std::runtime_error("Song is already playing") {}
+		AlreadyPlayingException() : WRE(L"Song is already playing") {}
 	};
 	struct NotePlayState
 	{

@@ -79,7 +79,7 @@ template <bool relaxed = false>
 class AtomicFlagLock : public std::atomic_flag
 {
 public:
-	EXCEPT(AlreadyLocked)
+	class AlreadyLocked : public WRE {};
 
 	AtomicFlagLock()
 		: std::atomic_flag{} {}
@@ -89,12 +89,12 @@ public:
 		if constexpr (relaxed)
 		{
 			if (test_and_set(std::memory_order_relaxed))
-				throw AlreadyLocked("Lock is already locked");
+				throw AlreadyLocked(L"Lock is already locked");
 		}
 		else
 		{
 			if (test_and_set())
-				throw AlreadyLocked("Lock is already locked");
+				throw AlreadyLocked(L"Lock is already locked");
 		}
 	}
 

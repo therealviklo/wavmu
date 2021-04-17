@@ -41,8 +41,8 @@ void Player::loop()
 							XAUDIO2_BUFFER bd{};
 							bd.AudioBytes = sizeof(bufs[currBuf]);
 							bd.pAudioData = reinterpret_cast<uint8_t*>(&bufs[currBuf]);
-							if (FAILED(sourceVoice->SubmitSourceBuffer(&bd)))
-								throw Exception("Failed to submit source buffer");
+							hrthrow(sourceVoice->SubmitSourceBuffer(&bd),
+									L"Failed to submit source buffer");
 						}
 
 						currBuf = (currBuf + 1) % (sizeof(bufs) / sizeof(*bufs));
@@ -51,28 +51,25 @@ void Player::loop()
 			}
 		}
 	}
-	catch (const std::exception& e)
-	{
-		MessageBoxA(nullptr, e.what(), "Sound player error", MB_ICONERROR);
-	}
 	catch (...)
 	{
-		MessageBoxW(nullptr, L"Unknown error.", L"Sound player error", MB_ICONERROR);
+		lippincott();
+		std::exit(0);
 	}
 }
 
 void Player::startVoice()
 {
 	const std::lock_guard<std::mutex> lg(comMutex);
-	if (FAILED(sourceVoice->Start()))
-		throw Exception("Failed to start source voice");
+	hrthrow(sourceVoice->Start(),
+			L"Failed to start source voice");
 }
 
 void Player::stopVoice()
 {
 	const std::lock_guard<std::mutex> lg(comMutex);
-	if (FAILED(sourceVoice->Stop()))
-		throw Exception("Failed to stop source voice");
+	hrthrow(sourceVoice->Stop(),
+			L"Failed to stop source voice");
 	sourceVoice->FlushSourceBuffers();
 }
 
@@ -83,12 +80,12 @@ Player::Player()
 	  currBuf(0),
 	  callback(this)
 {
-	if (FAILED(XAudio2Create(&xa2)))
-		throw Exception("Failed to initialise XAudio2");
+	hrthrow(XAudio2Create(&xa2),
+			L"Failed to initialise XAudio2");
 
 	IXAudio2MasteringVoice* tempMasteringVoice = nullptr;
-	if (FAILED(xa2->CreateMasteringVoice(&tempMasteringVoice)))
-		throw Exception("Failed to create mastering voice");
+	hrthrow(xa2->CreateMasteringVoice(&tempMasteringVoice),
+			L"Failed to create mastering voice");
 	decltype(masteringVoice) tempMasteringVoice2(tempMasteringVoice);
 	tempMasteringVoice2.swap(masteringVoice);
 
@@ -100,8 +97,8 @@ Player::Player()
 	wf.nAvgBytesPerSec = wf.nSamplesPerSec * wf.nBlockAlign;
 	wf.wBitsPerSample = sizeof(**bufs) * 8;
 	IXAudio2SourceVoice* tempSourceVoice = nullptr;
-	if (FAILED(xa2->CreateSourceVoice(&tempSourceVoice, &wf, 0, 2.0f, &callback)))
-		throw Exception("Failed to create source voice");
+	hrthrow(xa2->CreateSourceVoice(&tempSourceVoice, &wf, 0, 2.0f, &callback),
+			L"Failed to create source voice");
 	decltype(sourceVoice) tempSourceVoice2(tempSourceVoice);
 	tempSourceVoice2.swap(sourceVoice);
 

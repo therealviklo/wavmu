@@ -10,7 +10,6 @@ typedef int32_t Sample;
 
 class Wave
 {
-	EXCEPT(Exception)
 private:
 	struct {
 		uint16_t channels;

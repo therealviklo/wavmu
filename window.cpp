@@ -1,11 +1,11 @@
 #include "window.h"
 
-WindowClass defWindowClass(L"defWindowClass", (HBRUSH)COLOR_BACKGROUND, LoadCursorW(nullptr, IDC_ARROW));
+const WindowClass defWindowClass(L"defWindowClass", reinterpret_cast<HBRUSH>(COLOR_BACKGROUND), LoadCursorW(nullptr, IDC_ARROW));
 
 void updateAllWindows()
 {
 	MSG msg;
-	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw Window::Exception("Failed to get message");
+	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw WinError(L"Failed to get message");
 	TranslateMessage(&msg);
 	DispatchMessageW(&msg);
 }
@@ -22,7 +22,7 @@ WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSO
 	wc.hbrBackground = backgroundColour + 1;
 	wc.hCursor = cursor;
 
-	registered = RegisterClassExW(&wc);
+	registered = (RegisterClassExW(&wc) != 0U);
 }
 
 WindowClass::~WindowClass()
@@ -35,16 +35,16 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 	if (msg == WM_CREATE)
 	{
 		SetLastError(0);
-		if (!SetWindowLongPtrW(
+		if ((SetWindowLongPtrW(
 			hWnd,
 			GWLP_USERDATA,
 			(long long)reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams
-		) && GetLastError()) return -1;
+		) == 0) && (GetLastError() != 0U)) return -1;
 		return 0;
 	}
 
-	Window* const window = reinterpret_cast<Window*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
-	if (window)
+	auto* const window = reinterpret_cast<Window*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+	if ((bool)window)
 	{
 		switch (msg)
 		{
@@ -63,7 +63,15 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 			return 0;
 		}
 
-		return window->wndProc(msg, wParam, lParam);
+		try
+		{
+			return window->wndProc(msg, wParam, lParam);
+		}
+		catch (...)
+		{
+			lippincott();
+			std::exit(0);
+		}
 	}
 	return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
@@ -78,8 +86,8 @@ Window::Window(
 	int height
 )
 {
-	if (!wc.registered) throw Exception("Failed to register window class");
-	hWnd.reset(CreateWindowExW(
+	if (!wc.registered) throw NoResWinError(L"Failed to register window class");
+	hWnd = UWnd(CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
 		name,
@@ -93,7 +101,7 @@ Window::Window(
 		GetModuleHandleW(nullptr),
 		this
 	));
-	if (!hWnd) throw Exception("Failed to create window");
+	if (!hWnd) throw WinError(L"Failed to create window");
 	ShowWindow(hWnd.get(), SW_SHOW);
 }
 
@@ -108,8 +116,8 @@ Window::Window(
 	int height
 )
 {
-	if (!wc.registered) throw Exception("Failed to register window class");
-	hWnd.reset(CreateWindowExW(
+	if (!wc.registered) throw NoResWinError(L"Failed to register window class");
+	hWnd = UWnd(CreateWindowExW(
 		exStyle,
 		wc.className.c_str(),
 		name,
@@ -123,7 +131,7 @@ Window::Window(
 		GetModuleHandleW(nullptr),
 		this
 	));
-	if (!hWnd) throw Exception("Failed to create window");
+	if (!hWnd) throw WinError(L"Failed to create window");
 	(void)menu.menu.release();
 	ShowWindow(hWnd.get(), SW_SHOW);
 }
@@ -131,7 +139,7 @@ Window::Window(
 void Window::update()
 {
 	MSG msg;
-	if (GetMessageW(&msg, hWnd.get(), 0, 0) == -1) throw Exception("Failed to get message");
+	if (GetMessageW(&msg, hWnd.get(), 0, 0) == -1) throw WinError(L"Failed to get message");
 	TranslateMessage(&msg);
 	DispatchMessageW(&msg);
 }
@@ -148,7 +156,7 @@ LRESULT Control::subclassProc(HWND /*hWnd*/, UINT msg, WPARAM wParam, LPARAM lPa
 
 Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent)
 {
-	hWnd.reset(CreateWindowExW(
+	hWnd = UWnd(CreateWindowExW(
 		exStyle,
 		wc,
 		name,
@@ -162,10 +170,10 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 		GetModuleHandleW(nullptr),
 		nullptr
 	));
-	if (!hWnd) throw Exception("Failed to create control");
+	if (!hWnd) throw WinError(L"Failed to create control");
 
-	if (!SetWindowSubclass(hWnd.get(), subclassProc, 1, (DWORD_PTR)this))
-		throw Exception("Failed to change the control's window subclass");
+	if (SetWindowSubclass(hWnd.get(), subclassProc, 1, (DWORD_PTR)this) == 0)
+		throw WinError(L"Failed to change the control's window subclass");
 }
 
 std::wstring Control::getText()
@@ -200,37 +208,96 @@ UpDown::UpDown(DWORD style, DWORD exStyle, HWND buddy, HWND parent)
 
 int UpDown::getValue()
 {
-	BOOL success = false;
+	BOOL success = FALSE;
 	int ret = SendMessageW(*this, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&success));
-	if (success) throw Exception("Failed to get value from number entry box");
+	if (success != FALSE) throw WinError(L"Failed to get value from number entry box");
 	return ret;
 }
 
-Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
+Menu::Menu(std::initializer_list<MenuItemVariant> elements, HMENU* copy)
 	: menu(CreateMenu())
 {
-	if (!menu) throw Exception("Failed to create menu");
+	if (!menu) throw WinError(L"Failed to create menu");
 
-	for (auto& e : elements)
+	for (const auto& e : elements)
 	{
-		if (std::holds_alternative<MenuItem>(e))
-		{
-			if (!AppendMenuW(
-				menu.get(),
-				MF_STRING,
-				std::get<MenuItem>(e).second,
-				std::get<MenuItem>(e).first.c_str()
-			)) throw Exception("Failed to create meny item");
-		}
-		else if (std::holds_alternative<SubMenu>(e))
-		{
-			if (!AppendMenuW(
-				menu.get(),
-				MF_POPUP,
-				(UINT_PTR)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.get(),
-				std::get<SubMenu>(e).first.c_str()
-			)) throw Exception("Failed to create meny item");
-			(void)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.release();
-		}
+		std::visit([&](const auto& e){
+			using T = std::decay_t<decltype(e)>;
+			if constexpr (std::is_same_v<T, MenuItem::String>)
+			{
+				if (AppendMenuW(
+					menu.get(),
+					MF_STRING,
+					e.id,
+					e.text.c_str()
+				) == 0) throw WinError(L"Failed to create menu item");
+			}
+			else if constexpr (std::is_same_v<T, MenuItem::SubMenu>)
+			{
+				if (AppendMenuW(
+					menu.get(),
+					MF_POPUP,
+					(UINT_PTR)(HMENU)e.menu.menu.get(),
+					e.text.c_str()
+				) == 0) throw WinError(L"Failed to create menu item");
+				(void)e.menu.menu.release();
+			}
+			else if constexpr (std::is_same_v<T, MenuItem::Separator>)
+			{
+				if (AppendMenuW(
+					menu.get(),
+					MF_SEPARATOR,
+					0,
+					nullptr
+				) == 0) throw WinError(L"Failed to create menu item");
+			}
+			else if constexpr (std::is_same_v<T, MenuItem::CheckButton>)
+			{
+				if (AppendMenuW(
+					menu.get(),
+					MF_STRING,
+					e.id,
+					e.text.c_str()
+				) == 0) throw WinError(L"Failed to create menu item");
+
+				CheckMenuItem(
+					menu.get(),
+					e.id,
+					e.checked ? MF_CHECKED : MF_UNCHECKED
+				);
+			}
+			else if constexpr (std::is_same_v<T, MenuItem::RadioButton>)
+			{
+				if (AppendMenuW(
+					menu.get(),
+					MF_STRING,
+					e.id,
+					e.text.c_str()
+				) == 0) throw WinError(L"Failed to create menu item");
+
+				MENUITEMINFOW mii{};
+				mii.cbSize = sizeof(mii);
+				mii.fMask = MIIM_FTYPE | MIIM_STATE;
+
+				if (GetMenuItemInfoW(
+					menu.get(),
+					e.id,
+					MF_BYCOMMAND,
+					&mii
+				) == 0) throw WinError(L"Failed to get menu item info");
+
+				if (e.checked) mii.fType |= MFT_RADIOCHECK;
+				mii.fState = e.checked ? MFS_CHECKED : MFS_UNCHECKED;
+
+				if (SetMenuItemInfoW(
+					menu.get(),
+					e.id,
+					MF_BYCOMMAND,
+					&mii
+				) == 0) throw WinError(L"Failed to get menu item info");
+			}
+		}, e);
 	}
+	
+	if (copy != nullptr) *copy = menu.get();
 }

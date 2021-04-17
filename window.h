@@ -3,10 +3,14 @@
 #include "win.h"
 #include <commctrl.h>
 #include "utils.h"
+#include "winerror.h"
+#include "lippincott.h"
 
 // Klasser för att göra fönster.
 
 void updateAllWindows();
+
+using UWnd = UHandle<HWND, DestroyWindow>;
 
 // Forwarddeklaration
 class Window;
@@ -36,10 +40,8 @@ class Menu;
 class Window
 {
 	friend WindowClass;
-public:
-	EXCEPT(Exception);
 private:
-	UHandle<HWND, DestroyWindow> hWnd;
+	UWnd hWnd;
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 public:
 	Window() noexcept = default;
@@ -71,14 +73,26 @@ public:
 	// Kör den här för att få fönstret att uppdatera. (Annars fryser det.)
 	void update();
 
+	template <class ParentWindowClass>
+	ParentWindowClass& getParent() const
+	{
+		return dynamic_cast<MainWindow&>(*reinterpret_cast<Window*>(GetWindowLongPtrW(GetParent(hWnd.get()), GWLP_USERDATA)));
+	}
+
+	RECT getSize() const
+	{
+		RECT rc{};
+		if (!GetClientRect(hWnd.get(), &rc))
+			throw WinError(L"Failed to get client area");
+		return rc;
+	}
+
 	constexpr operator HWND() noexcept { return hWnd.get(); }
-	constexpr operator bool() const noexcept { return (bool)hWnd; }
+	constexpr operator bool() const noexcept { return hWnd.get(); }
 };
 
 class Control
 {
-public:
-	EXCEPT(Exception);
 private:
 	UHandle<HWND, DestroyWindow> hWnd;
 
@@ -92,7 +106,7 @@ public:
 	std::wstring getText();
 
 	constexpr operator HWND() noexcept { return hWnd.get(); }
-	constexpr operator bool() const noexcept { return (bool)hWnd; }
+	constexpr operator bool() const noexcept { return hWnd.get(); }
 };
 
 class EditControl : public Control
@@ -136,17 +150,117 @@ public:
 		: Control(L"Static", style, exStyle, text, parent) {}
 };
 
-typedef std::pair<std::wstring, Menu> SubMenu;
-typedef std::pair<std::wstring, UINT_PTR> MenuItem;
+namespace MenuItem
+{
+	struct SubMenu;
+	struct String
+	{
+		std::wstring text;
+		UINT_PTR id;
+	};
+	struct Separator {};
+	struct CheckButton
+	{
+		std::wstring text;
+		bool checked;
+		UINT_PTR id;
+	};
+	struct RadioButton
+	{
+		std::wstring text;
+		bool checked;
+		UINT_PTR id;
+	};
+}
+using MenuItemVariant = std::variant<
+	MenuItem::String,
+	MenuItem::SubMenu,
+	MenuItem::Separator,
+	MenuItem::CheckButton,
+	MenuItem::RadioButton
+>;
 class Menu
 {
 	friend Window;
-public:
-	EXCEPT(Exception)
 private:
-	UHandle<HMENU, DestroyMenu> menu;
+	mutable UHandle<HMENU, DestroyMenu> menu;
+	Menu(std::initializer_list<MenuItemVariant> elements, HMENU* copy);
 public:
-	Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements);
+	Menu(std::initializer_list<MenuItemVariant> elements)
+		: Menu(std::move(elements), nullptr) {}
+	Menu(std::initializer_list<MenuItemVariant> elements, HMENU& copy)
+		: Menu(std::move(elements), &copy) {}
+};
+struct MenuItem::SubMenu
+{
+	std::wstring text;
+	Menu menu;
 };
 
-extern WindowClass defWindowClass;
+template <class W, void (*callback)(W&) = nullptr>
+class Timer
+{
+private:
+	bool started;
+	UINT_PTR id;
+	HWND hWnd;
+	UINT msTimeout;
+
+	static void timerproc(HWND hWnd, UINT msg, UINT_PTR id, DWORD ms) noexcept
+	{
+		try
+		{
+			callback(dynamic_cast<W&>(*reinterpret_cast<Window*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA))));
+		}
+		catch (...)
+		{
+			lippincott();
+			std::terminate();
+		}
+	}
+public:
+	Timer(UINT_PTR id, HWND hWnd, UINT msTimeout) noexcept :
+		started(false),
+		id(id),
+		hWnd(hWnd),
+		msTimeout(msTimeout) {}
+	~Timer()
+	{
+		if (started) KillTimer(hWnd, id);
+	}
+
+	Timer(const Timer&) = delete;
+	Timer& operator=(const Timer&) = delete;
+
+	void start()
+	{
+		if (!started)
+		{
+			if (SetTimer(
+				hWnd,
+				id,
+				msTimeout,
+				callback != nullptr ? &timerproc : nullptr
+			) == 0) throw WinError(L"Failed to start timer");
+			started = true;
+		}
+	}
+
+	void stop()
+	{
+		if (started)
+		{
+			if (KillTimer(
+				hWnd,
+				id
+			) == FALSE) throw WinError(L"Failed to stop timer");
+			started = false;
+		}
+	}
+
+	constexpr bool isStarted() const noexcept { return started; }
+
+	constexpr HWND getHwnd() const noexcept { return hWnd; }
+};
+
+extern const WindowClass defWindowClass;

@@ -10,6 +10,8 @@
 #include "wav.h"
 #include "track.h"
 #include "threadutils.h"
+#include "winerror.h"
+#include "lippincott.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -21,8 +23,6 @@ void voiceDeleter(T* voice)
 
 class Player
 {
-public:
-	EXCEPT(Exception)
 private:
 	std::atomic<bool> running;
 

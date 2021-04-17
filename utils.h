@@ -1,33 +1,15 @@
 #pragma once
-#include <utility>
 #include <stdexcept>
+#include <utility>
+#include <string>
 #include <sstream>
 #include <type_traits>
+#include <memory>
+#include <concepts>
+#include <cmath>
 #include "win.h"
+#include "werror.h"
 
-// Diverse bra-att-ha-saker
-
-/* Förlåt mig för att använda en så konstig makro men den här
-   makron kan man använda för att snabbt definiera en exceptiontyp.
-   Den har en konstruktor där man anger ett felmeddelande som visas. */
-#define EXCEPT(name) \
-	struct name final : public std::runtime_error \
-	{ \
-		name(const char* msg) : std::runtime_error(msg) {} \
-	};
-
-template <class Handle, auto Closer>
-struct UHandleHelper
-{
-	constexpr inline void operator()(Handle h) noexcept(noexcept(Closer(nullptr)))
-	{
-		if (h) Closer(h);
-	}
-};
-template <class Handle, auto Closer>
-using UHandle = std::unique_ptr<std::remove_pointer_t<Handle>, UHandleHelper<Handle, Closer>>;
-
-// Konvertera något till en std::string.
 template <typename T>
 std::string toString(T t)
 {
@@ -36,7 +18,6 @@ std::string toString(T t)
 	return ss.str();
 }
 
-// Konvertera något till en std::wstring.
 template <typename T>
 std::wstring toWString(T t)
 {
@@ -57,8 +38,9 @@ inline std::string wstringToString(const std::wstring& s)
 		nullptr,
 		nullptr
 	);
+	if (!len) throw WRE(L"Failed to convert UTF-16 string to UTF-8 string");
 	std::string ret(len, '\0');
-	WideCharToMultiByte(
+	if (!WideCharToMultiByte(
 		CP_UTF8,
 		0,
 		s.c_str(),
@@ -67,7 +49,7 @@ inline std::string wstringToString(const std::wstring& s)
 		ret.length(),
 		nullptr,
 		nullptr
-	);
+	)) throw WRE(L"Failed to convert UTF-16 string to UTF-8 string");
 	return ret;
 }
 
@@ -81,14 +63,27 @@ inline std::wstring stringToWstring(const std::string& s)
 		nullptr,
 		0
 	);
+	if (!len) throw WRE(L"Failed to convert UTF-8 string to UTF-16 string");
 	std::wstring ret(len, L'\0');
-	MultiByteToWideChar(
+	if (!MultiByteToWideChar(
 		CP_UTF8,
 		0,
 		s.c_str(),
 		s.length(),
 		&ret[0],
 		ret.length()
-	);
+	)) throw WRE(L"Failed to convert UTF-8 string to UTF-16 string");
 	return ret;
 }
+
+template <typename T, auto Closer>
+struct UHandleHelper
+{
+	constexpr inline void operator()(T ptr) const noexcept(noexcept(Closer(ptr)))
+	{
+		if (ptr) Closer(ptr);
+	}
+};
+template <typename T, auto Closer>
+	requires std::is_pointer_v<T>
+using UHandle = std::unique_ptr<std::remove_pointer_t<T>, UHandleHelper<T, Closer>>;

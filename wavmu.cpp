@@ -172,13 +172,9 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, PWSTR 
 			updateAllWindows();
 		}
 	}
-	catch (const std::exception& e)
-	{
-		MessageBoxA(nullptr, e.what(), "Fatal error", MB_ICONERROR);
-	}
 	catch (...)
 	{
-		MessageBoxW(nullptr, L"Unknown error.", L"Fatal error", MB_ICONERROR);
+		lippincott();
 	}
 
 	return 0;
