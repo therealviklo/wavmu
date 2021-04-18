@@ -1,1 +1,1 @@
-﻿@vmake -b -o wavmu.exe -L -luser32 -L -lcomctl32 -L -mwindows clang++ -O2 -std=c++20 -Wall -Wextra
+﻿@vmake -b -o wavmu.exe -L -mwindows -L -luser32 -L -lcomctl32 -L -lgdi32 clang++ -O2 -std=c++20 -Wall -Wextra

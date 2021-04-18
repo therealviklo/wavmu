@@ -83,7 +83,8 @@ Window::Window(
 	const wchar_t* name,
 	HWND parent,
 	int width,
-	int height
+	int height,
+	bool show
 )
 {
 	if (!wc.registered) throw NoResWinError(L"Failed to register window class");
@@ -102,7 +103,7 @@ Window::Window(
 		this
 	));
 	if (!hWnd) throw WinError(L"Failed to create window");
-	ShowWindow(hWnd.get(), SW_SHOW);
+	if (show) ShowWindow(hWnd.get(), SW_SHOW);
 }
 
 Window::Window(
@@ -113,7 +114,8 @@ Window::Window(
 	Menu&& menu,
 	HWND parent,
 	int width,
-	int height
+	int height,
+	bool show
 )
 {
 	if (!wc.registered) throw NoResWinError(L"Failed to register window class");
@@ -133,7 +135,7 @@ Window::Window(
 	));
 	if (!hWnd) throw WinError(L"Failed to create window");
 	(void)menu.menu.release();
-	ShowWindow(hWnd.get(), SW_SHOW);
+	if (show) ShowWindow(hWnd.get(), SW_SHOW);
 }
 
 void Window::update()

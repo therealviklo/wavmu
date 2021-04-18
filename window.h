@@ -52,7 +52,8 @@ public:
 		const wchar_t* name,
 		HWND parent = nullptr,
 		int width = CW_USEDEFAULT,
-		int height = CW_USEDEFAULT
+		int height = CW_USEDEFAULT,
+		bool show = true
 	);
 	Window(
 		const WindowClass& wc,
@@ -62,7 +63,8 @@ public:
 		Menu&& menu,
 		HWND parent = nullptr,
 		int width = CW_USEDEFAULT,
-		int height = CW_USEDEFAULT
+		int height = CW_USEDEFAULT,
+		bool show = true
 	);
 	virtual ~Window() = default;
 
