@@ -25,14 +25,14 @@ public:
 	WICFactory();
 };
 
-class Bitmap;
-
 class RenderTarget
 {
 	friend class Bitmap;
+	friend class SolidBrush;
 private:
 	HWND hWnd;
 	ComPtr<ID2D1HwndRenderTarget> rt;
+	unsigned long long ver;
 
 	void createRenderTarget(D2DFactory& d2dfac);
 public:
@@ -63,23 +63,38 @@ public:
 		rt->Resize(D2D1::SizeU(w, h));
 	}
 
-	void drawBitmap(const Bitmap& bitmap, float x, float y, float w, float h, float alpha = 1.0f) noexcept;
+	void drawBitmap(Bitmap& bitmap, float x, float y, float w, float h, float alpha = 1.0f) noexcept;
 	void clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f) noexcept
 	{
 		rt->Clear(D2D1::ColorF(r, g, b, a));
 	}
+	void drawLine(D2D1_POINT_2F a, D2D1_POINT_2F b, SolidBrush& brush, float strokeWidth) noexcept;
+	void drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noexcept;
 };
 
 class Bitmap
 {
 	friend class RenderTarget;
 private:
+	unsigned long long ver;
+	ComPtr<IWICFormatConverter> fmtCnv;
 	ComPtr<ID2D1Bitmap> bmp;
 	unsigned w;
 	unsigned h;
+
+	void recreateIfOutdated(RenderTarget& rt);
 public:
 	Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt);
 
 	constexpr unsigned getWidth() const noexcept { return w; }
 	constexpr unsigned getHeight() const noexcept { return h; }
+};
+
+class SolidBrush
+{
+	friend class RenderTarget;
+private:
+	ComPtr<ID2D1SolidColorBrush> brush;
+public:
+	SolidBrush(D2D1_COLOR_F colour, RenderTarget& rt);
 };

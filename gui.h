@@ -20,7 +20,7 @@ public:
 	virtual LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
 };
 
-class TrackWindow : public View
+class TrackView : public View
 {
 public:
 	LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) override;
@@ -35,7 +35,7 @@ public:
 	Player player;
 	D2DFactory d2dfac;
 	RenderTarget rt;
-	
+
 	MainWindow();
 	
 	void vpush(std::unique_ptr<View> view);

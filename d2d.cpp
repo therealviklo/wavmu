@@ -27,6 +27,8 @@ void RenderTarget::createRenderTarget(D2DFactory& d2dfac)
 {
 	HRESULT hr = 0;
 
+	ver++;
+
 	RECT rc;
 	if (GetClientRect(hWnd, &rc) == 0) throw WinError(L"Failed to get window client area");
 
@@ -48,8 +50,9 @@ void RenderTarget::createRenderTarget(D2DFactory& d2dfac)
 	rt->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
 }
 
-void RenderTarget::drawBitmap(const Bitmap& bitmap, float x, float y, float w, float h, float alpha) noexcept
+void RenderTarget::drawBitmap(Bitmap& bitmap, float x, float y, float w, float h, float alpha) noexcept
 {
+	bitmap.recreateIfOutdated(*this);
 	rt->DrawBitmap(
 		bitmap.bmp.Get(),
 		D2D1::RectF(x, y, x + w, y + h),
@@ -59,13 +62,44 @@ void RenderTarget::drawBitmap(const Bitmap& bitmap, float x, float y, float w, f
 	);
 }
 
-RenderTarget::RenderTarget(HWND hWnd, D2DFactory& d2dfac)
-	: hWnd(hWnd)
+void RenderTarget::drawLine(D2D1_POINT_2F a, D2D1_POINT_2F b, SolidBrush& brush, float strokeWidth) noexcept
+{
+	rt->DrawLine(
+		a,
+		b,
+		brush.brush.Get(),
+		strokeWidth,
+		nullptr
+	);	
+}
+
+void RenderTarget::drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noexcept
+{
+	rt->FillRectangle(rect, brush.brush.Get());
+}
+
+RenderTarget::RenderTarget(HWND hWnd, D2DFactory& d2dfac) :
+	hWnd(hWnd),
+	ver(0)
 {
 	createRenderTarget(d2dfac);
 }
 
-Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt)
+void Bitmap::recreateIfOutdated(RenderTarget& rt)
+{
+	if (ver != rt.ver)
+	{
+		hrthrow(rt.rt->CreateBitmapFromWicBitmap(
+					fmtCnv.Get(),
+					&bmp
+				),
+				L"Failed to create Direct2D bitmap");
+		ver = rt.ver;
+	}
+}
+
+Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt) :
+	ver(rt.ver)
 {
 	HRESULT hr = 0;
 
@@ -84,7 +118,6 @@ Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt)
 		&bmpDcd
 	))) throw WinError(L"Failed to decode image", hr);
 
-	ComPtr<IWICFormatConverter> fmtCnv;
 	if (FAILED(hr = wicfac.factory->CreateFormatConverter(&fmtCnv)))
 		throw WinError(L"Failed to create format converter", hr);
 
@@ -105,4 +138,13 @@ Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt)
 	const auto size = bmp->GetPixelSize();
 	w = size.width;
 	h = size.height;
+}
+
+SolidBrush::SolidBrush(D2D1_COLOR_F colour, RenderTarget& rt)
+{
+	hrthrow(rt.rt->CreateSolidColorBrush(
+				colour,
+				&brush
+			),
+			L"Failed to create solid colour brush");
 }
