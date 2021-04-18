@@ -119,8 +119,8 @@ class ComHandler
 public:
 	ComHandler()
 	{
-		if (FAILED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
-			throw std::runtime_error("Failed to initialise COM");
+		hrthrow(CoInitializeEx(nullptr, COINIT_MULTITHREADED),
+				L"Failed to initialise COM");
 	}
 
 	~ComHandler()

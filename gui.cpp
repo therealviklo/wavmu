@@ -1,49 +1,20 @@
 #include "gui.h"
 
-TrackWindow::TrackWindow(MainWindow& mw) :
-	Window(
-		defWindowClass,
-		WS_CHILD,
-		0,
-		L"",
-		mw,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		false
-	),
-	tracks(mw.tracks),
-	player(mw.player)
-{
-	const auto size = mw.getSize();
-	SetWindowPos(
-		*this,
-		nullptr,
-		0,
-		0,
-		size.right,
-		size.bottom,
-		SWP_NOOWNERZORDER
-		| SWP_NOZORDER
-	);
-}
-
-LRESULT TrackWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT TrackWindow::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
 		case WM_PAINT:
 		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(*this, &ps);
-			UHandle<HBRUSH, DeleteObject> brush(CreateSolidBrush(RGB(255, 0, 0)));
+			mw.rt.beginDraw();
+			mw.rt.clear(0.1f, 0.1f, 0.1f);
 
-			FillRect(hdc, &ps.rcPaint, brush.get());
-
-			EndPaint(*this, &ps);
+			if (mw.rt.endDraw(mw.d2dfac))
+				ValidateRect(mw, nullptr);
 		}
 		return 0;
 	}
-	return DefWindowProcW(*this, msg, wParam, lParam);
+	return DefWindowProcW(mw, msg, wParam, lParam);
 }
 
 MainWindow::MainWindow() :
@@ -51,38 +22,34 @@ MainWindow::MainWindow() :
 		defWindowClass,
 		WS_OVERLAPPEDWINDOW,
 		0,
-		L"Wavmu"
-	)
+		L"Wavmu",
+		nullptr,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		false
+	),
+	rt(*this, d2dfac)
 {
-	wstack.push(std::make_unique<TrackWindow>(*this));
+	vpush(std::make_unique<TrackWindow>());
+	ShowWindow(*this, SW_SHOW);
 }
-	
-void MainWindow::onResize(WORD w, WORD h)
+
+void MainWindow::vpush(std::unique_ptr<View> view)
 {
-	if (!wstack.empty())
-	{
-		SetWindowPos(
-			wstack.top(),
-			nullptr,
-			0,
-			0,
-			w,
-			h,
-			SWP_NOOWNERZORDER
-			| SWP_NOZORDER
-		);
-	}
+	views.emplace(std::move(view));
+}
+
+void MainWindow::vpop() noexcept
+{
+	views.pop();
 }
 
 LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
-		case WM_SIZE:
-		{
-			onResize(LOWORD(lParam), HIWORD(lParam));
-		}
-		return 0;
 	}
+	if (!views.empty())
+		return views.top()->wndProc(*this, msg, wParam, lParam);
 	return DefWindowProcW(*this, msg, wParam, lParam);
 }

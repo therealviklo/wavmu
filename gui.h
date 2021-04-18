@@ -1,32 +1,45 @@
 #pragma once
+#include <concepts>
+#include <memory>
+#include <stack>
 #include "window.h"
-#include "wm.h"
 #include "player.h"
+#include "d2d.h"
 
 class MainWindow;
 
-class TrackWindow : public Window
+class View
 {
-private:
-	Tracks& tracks;
-	Player& player;
 public:
-	TrackWindow(MainWindow& mw);
+	View() = default;
+	virtual ~View() = default;
 
-	LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam);
+	View(const View&) = delete;
+	View& operator=(const View&) = delete;
+
+	virtual LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
+};
+
+class TrackWindow : public View
+{
+public:
+	LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) override;
 };
 
 class MainWindow : public Window
 {
-	friend TrackWindow::TrackWindow(MainWindow&);
 private:
+	std::stack<std::unique_ptr<View>> views;
+public:
 	Tracks tracks;
 	Player player;
-	WindowStack wstack;
-public:
+	D2DFactory d2dfac;
+	RenderTarget rt;
+	
 	MainWindow();
 	
-	void onResize(WORD w, WORD h);
+	void vpush(std::unique_ptr<View> view);
+	void vpop() noexcept;
 
 	LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 };
