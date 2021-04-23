@@ -39,7 +39,11 @@ bool pressInPlace(float x, float y, Placement place);
 
 class TrackView : public View
 {
+private:
+	long long selectedTrackPlus;
 public:
+	TrackView();
+	
 	LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) override;
 };
 
