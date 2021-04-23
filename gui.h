@@ -5,6 +5,7 @@
 #include "window.h"
 #include "player.h"
 #include "d2d.h"
+#include <windowsx.h>
 
 class MainWindow;
 
@@ -19,6 +20,21 @@ public:
 
 	virtual LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
 };
+
+struct Placement
+{
+	float x;
+	float y;
+	float w;
+	float h;
+
+	operator D2D1_RECT_F() const noexcept
+	{
+		return D2D1::RectF(x, y, x + w, y + h);
+	}
+};
+
+bool pressInPlace(float x, float y, Placement place);
 
 class TrackView : public View
 {

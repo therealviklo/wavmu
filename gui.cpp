@@ -1,5 +1,21 @@
 #include "gui.h"
 
+namespace
+{
+	inline Placement channelHeadPlace(size_t n)
+	{
+		return {0.0f, 100.0f * n, 200.0f, 100.0f};
+	}
+}
+
+bool pressInPlace(float x, float y, Placement place)
+{
+	return x > place.x
+		&& x < place.x + place.w
+		&& y > place.y
+		&& y < place.y + place.h;
+}
+
 LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -19,25 +35,56 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				size_t i = 0;
 				for (; i < mw.tracks.data.size(); i++)
 				{
+					const auto place = channelHeadPlace(i);
 					mw.rt.drawRectangle(
-						D2D1::RectF(0.0f, 100.0f * i, 200.0f, 100.0f * i + 100.0f),
+						place,
 						grey
 					);
 					mw.rt.drawLine(
-						D2D1::Point2F(0.0f, 100.0f * (i + 1)),
-						D2D1::Point2F(size.right, 100.0f * (i + 1)),
+						D2D1::Point2F(0.0f, place.y + place.h),
+						D2D1::Point2F(size.right, place.y + place.h),
 						grey,
 						2.0f
 					);
 				}
+				const auto place = channelHeadPlace(i);
 				mw.rt.drawRectangle(
-					D2D1::RectF(0.0f, 100.0f * i, 200.0f, 100.0f * i + 100.0f),
+					place,
 					lightgrey
+				);
+				mw.rt.drawRectangle(
+					Placement{
+						place.x + place.w / 2.0f - 15.0f / 2.0f,
+						place.y + place.h / 4.0f,
+						15.0f,
+						place.h / 2.0f
+					},
+					grey
+				);
+				mw.rt.drawRectangle(
+					Placement{
+						place.x + place.w / 2.0f - place.h / 4.0f,
+						place.y + place.h / 2.0f - 15.0f / 2.0f,
+						place.h / 2.0f,
+						15.0f
+					},
+					grey
 				);
 			}
 
 			if (mw.rt.endDraw(mw.d2dfac))
 				ValidateRect(mw, nullptr);
+		}
+		return 0;
+		case WM_LBUTTONDOWN:
+		{
+			const auto mx = GET_X_LPARAM(lParam);
+			const auto my = GET_Y_LPARAM(lParam);
+			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
+			{
+				MessageBoxW(mw, L"Hejsna", L"test", 0);
+			}
+			else break;
 		}
 		return 0;
 	}
