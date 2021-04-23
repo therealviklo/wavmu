@@ -6,6 +6,7 @@
 #include "player.h"
 #include "d2d.h"
 #include <windowsx.h>
+#include "instrument.h"
 
 class MainWindow;
 

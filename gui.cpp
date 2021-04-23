@@ -82,7 +82,12 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			const auto my = GET_Y_LPARAM(lParam);
 			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
 			{
-				MessageBoxW(mw, L"Hejsna", L"test", 0);
+				const std::lock_guard lg(mw.tracks.mtx);
+				if (!mw.tracks.playing.test(std::memory_order::relaxed))
+				{
+					mw.tracks.data.push_back(Track{std::make_unique<SinInstrument>(), std::vector<Track::SectionRef>{}});
+					InvalidateRect(mw, nullptr, FALSE);
+				}
 			}
 			else break;
 		}
