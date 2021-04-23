@@ -1,4 +1,5 @@
 ﻿#include "gui.h"
+#include "trackview.h"
 
 // class TestWindow : public Window
 // {
@@ -139,6 +140,8 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, PWSTR 
 		ComHandler ch;
 		
 		MainWindow mw;
+		mw.vpush(std::make_unique<TrackView>());
+		ShowWindow(mw, SW_SHOWDEFAULT);
 		while (mw)
 		{
 			updateAllWindows();

@@ -1,5 +1,4 @@
 #include "gui.h"
-#include "trackview.h"
 
 MainWindow::MainWindow() :
 	Window(
@@ -12,11 +11,7 @@ MainWindow::MainWindow() :
 		CW_USEDEFAULT,
 		false
 	),
-	rt(*this, d2dfac)
-{
-	vpush(std::make_unique<TrackView>());
-	ShowWindow(*this, SW_SHOWDEFAULT);
-}
+	rt(*this, d2dfac) {}
 
 void MainWindow::vpush(std::unique_ptr<View> view)
 {
