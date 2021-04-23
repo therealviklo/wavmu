@@ -7,6 +7,7 @@
 #include "d2d.h"
 #include <windowsx.h>
 #include "instrument.h"
+#include "guiutils.h"
 
 class MainWindow;
 
@@ -20,31 +21,6 @@ public:
 	View& operator=(const View&) = delete;
 
 	virtual LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
-};
-
-struct Placement
-{
-	float x;
-	float y;
-	float w;
-	float h;
-
-	operator D2D1_RECT_F() const noexcept
-	{
-		return D2D1::RectF(x, y, x + w, y + h);
-	}
-};
-
-bool pressInPlace(float x, float y, Placement place);
-
-class TrackView : public View
-{
-private:
-	long long selectedTrackPlus;
-public:
-	TrackView();
-	
-	LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) override;
 };
 
 class MainWindow : public Window
