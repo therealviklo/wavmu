@@ -1,11 +1,13 @@
 #pragma once
+#include <algorithm>
 #include "gui.h"
 
 class TrackView : public View
 {
 private:
 	long long selectedTrackPlus;
-	float addSectionX;
+	float addSectionPos;
+	float noteSize;
 public:
 	TrackView();
 

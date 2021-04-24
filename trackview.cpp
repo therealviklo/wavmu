@@ -16,7 +16,8 @@ namespace
 
 TrackView::TrackView() :
 	selectedTrackPlus(-1),
-	addSectionX(0.0f) {}
+	addSectionPos(0.0f),
+	noteSize(50.0f) {}
 
 LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -28,7 +29,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			SolidBrush grey(D2D1::ColorF(0.1f, 0.1f, 0.1f), mw.rt);
 			SolidBrush lightishgrey(D2D1::ColorF(0.13f, 0.13f, 0.13f), mw.rt);
 			SolidBrush lightgrey(D2D1::ColorF(0.2f, 0.2f, 0.2f), mw.rt);
-			SolidBrush transblue(D2D1::ColorF(0.0f, 0.0f, 0.4f, 0.5f), mw.rt);
+			SolidBrush darkblue(D2D1::ColorF(0.0f, 0.0f, 0.2f), mw.rt);
 			SolidBrush blue(D2D1::ColorF(0.0f, 0.0f, 0.4f), mw.rt);
 
 			const auto size = mw.getSize();
@@ -39,27 +40,54 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				const std::lock_guard lg(mw.tracks.mtx);
 				size_t i = 0;
+				// Tracks
 				for (; i < mw.tracks.data.size(); i++)
 				{
+					constexpr float dividerW = 5.0f;
+
 					const auto place = channelHeadPlace(i);
+					// Rita bakgrunden
 					mw.rt.drawRectangle(
 						D2D1::RectF(place.x + place.w, place.y, size.right, place.y + place.h),
 						lightishgrey
 					);
 
-					if (i == (size_t)selectedTrackPlus)
+					// Rita sektioner
+					for (const auto& sect : mw.tracks.data[i].sections)
 					{
+						const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
+						const Placement sectPlace{place.x + place.w + noteSize * (float)sect.timestamp, place.y, sectLen * noteSize, place.h};
 						mw.rt.drawRectangle(
-							Placement{addSectionX, place.y, 200.0f, place.h},
-							transblue
+							sectPlace,
+							blue
+						);
+						constexpr float outlineW = 2.0f;
+						mw.rt.outlineRectangle(
+							D2D1::RectF(
+								sectPlace.x + outlineW / 2.0f,
+								sectPlace.y + outlineW / 2.0f,
+								sectPlace.x + sectPlace.w - outlineW / 2.0f,
+								sectPlace.y + sectPlace.h - dividerW - outlineW / 2.0f
+							),
+							darkblue,
+							outlineW
 						);
 					}
 
+					// Rita eventuellt förhandsvisningen av sektionen
+					if (i == (size_t)selectedTrackPlus)
+					{
+						mw.rt.drawRectangle(
+							Placement{place.x + place.w + addSectionPos, place.y, noteSize, place.h},
+							darkblue
+						);
+					}
+
+					// Rita "huvudet" till vänster och separatorlinjen
 					mw.rt.drawRectangle(
 						place,
 						grey
 					);
-					constexpr float dividerW = 5.0f;
 					mw.rt.drawLine(
 						D2D1::Point2F(0.0f, place.y + place.h - dividerW / 2.0f),
 						D2D1::Point2F(size.right, place.y + place.h - dividerW / 2.0f),
@@ -67,9 +95,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						dividerW
 					);
 
+					// Rita plusset
 					const auto plusPlace = trackPlusPlace(i);
 					if (i == (size_t)selectedTrackPlus)
 					{
+						// Valda bakgrunden
 						mw.rt.drawRectangle(
 							plusPlace,
 							lightgrey
@@ -94,6 +124,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						darkgrey
 					);
 				}
+				// Rita lägg-till-track-knappen
 				const auto place = channelHeadPlace(i);
 				mw.rt.drawRectangle(
 					place,
@@ -127,6 +158,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		{
 			const auto mx = GET_X_LPARAM(lParam);
 			const auto my = GET_Y_LPARAM(lParam);
+			const auto size = mw.getSize();
 			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
 			{
 				const std::lock_guard lg(mw.tracks.mtx);
@@ -141,6 +173,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				const std::lock_guard lg(mw.tracks.mtx);
 				for (size_t i = 0; i < mw.tracks.data.size(); i++)
 				{
+					const auto headPlace = channelHeadPlace(i);
 					if (pressInPlace(mx, my, trackPlusPlace(i)))
 					{
 						if (i == (size_t)selectedTrackPlus)
@@ -151,7 +184,26 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						{
 							selectedTrackPlus = i;
 						}
-						addSectionX = mx;
+						addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
+						InvalidateRect(mw, nullptr, FALSE);
+						return 0;
+					}
+					if (i == (size_t)selectedTrackPlus && pressInPlace(
+							mx,
+							my,
+							Placement{
+								headPlace.x + headPlace.w,
+								headPlace.y,
+								size.right - headPlace.x - headPlace.w,
+								headPlace.h
+							}
+						))
+					{
+						mw.tracks.data[i].sections.emplace_back(Track::SectionRef{
+							std::make_shared<Section>(),
+							(mx - (headPlace.x + headPlace.w)) / noteSize
+						});
+						selectedTrackPlus = -1;
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
@@ -163,7 +215,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		{
 			if (selectedTrackPlus != -1)
 			{
-				addSectionX = GET_X_LPARAM(lParam);
+				const auto headPlace = channelHeadPlace(selectedTrackPlus);
+				addSectionPos = std::max<float>(GET_X_LPARAM(lParam) - (headPlace.x + headPlace.w), 0.0f);
 				InvalidateRect(mw, nullptr, FALSE);
 			}
 		}

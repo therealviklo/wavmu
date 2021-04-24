@@ -78,6 +78,11 @@ void RenderTarget::drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noe
 	rt->FillRectangle(rect, brush.brush.Get());
 }
 
+void RenderTarget::outlineRectangle(const D2D1_RECT_F& rect, SolidBrush& brush, float strokeWidth) noexcept
+{
+	rt->DrawRectangle(rect, brush.brush.Get(), strokeWidth);
+}
+
 RenderTarget::RenderTarget(HWND hWnd, D2DFactory& d2dfac) :
 	hWnd(hWnd),
 	ver(0)

@@ -17,5 +17,7 @@ struct Section
 {
 	std::vector<Note> notes;
 	/* double length; */ // Kanske
+
+	double calcLength();
 };
 typedef std::vector<std::shared_ptr<Section>> Sections;

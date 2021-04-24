@@ -70,6 +70,7 @@ public:
 	}
 	void drawLine(D2D1_POINT_2F a, D2D1_POINT_2F b, SolidBrush& brush, float strokeWidth) noexcept;
 	void drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noexcept;
+	void outlineRectangle(const D2D1_RECT_F& rect, SolidBrush& brush, float strokeWidth) noexcept;
 };
 
 class Bitmap
