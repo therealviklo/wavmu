@@ -10,22 +10,6 @@
 #include "win.h"
 #include "werror.h"
 
-template <typename T>
-std::string toString(T t)
-{
-	std::stringstream ss;
-	ss << t;
-	return ss.str();
-}
-
-template <typename T>
-std::wstring toWString(T t)
-{
-	std::wstringstream ss;
-	ss << t;
-	return ss.str();
-}
-
 inline std::string wstringToString(const std::wstring& s)
 {
 	size_t len = WideCharToMultiByte(
