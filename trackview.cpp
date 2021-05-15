@@ -178,6 +178,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				return 0;
 			}
 			{
+				selectedSection = nullptr;
 				const std::lock_guard lg(mw.tracks.mtx);
 				for (size_t i = 0; i < mw.tracks.data.size(); i++)
 				{
@@ -199,9 +200,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					}
 					if (selectedTrackPlus == -1)
 					{
-						selectedSection = nullptr;
 						// Välj sektion
-						if (pressInPlace(
+						if (pressInPlace( // Kollar om man ens har tryckt på spåret
 							mx,
 							my,
 							Placement{
@@ -212,6 +212,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							}
 						))
 						{
+							// Går igenom spåren och kollar om man har tryckt på det
 							for (auto it = mw.tracks.data[i].sections.rbegin();
 								it != mw.tracks.data[i].sections.rend();
 								++it)
@@ -227,9 +228,9 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 									break;
 								}
 							}
+							InvalidateRect(mw, nullptr, FALSE);
+							return 0;
 						}
-						InvalidateRect(mw, nullptr, FALSE);
-						return 0;
 					}
 					else
 					{
