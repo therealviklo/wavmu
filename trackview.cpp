@@ -12,6 +12,13 @@ namespace
 		const auto head = channelHeadPlace(n);
 		return {head.x + head.w - 30.0f, head.y, 30.0f, 30.0f};
 	}
+
+	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize)
+	{
+		const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
+		const Placement place = channelHeadPlace(n);
+		return Placement{place.x + place.w + noteSize * (float)sect.timestamp, place.y, sectLen * noteSize, place.h};
+	}
 }
 
 TrackView::TrackView() :
@@ -30,6 +37,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			SolidBrush lightishgrey(D2D1::ColorF(0.13f, 0.13f, 0.13f), mw.rt);
 			SolidBrush lightgrey(D2D1::ColorF(0.2f, 0.2f, 0.2f), mw.rt);
 			SolidBrush darkblue(D2D1::ColorF(0.0f, 0.0f, 0.2f), mw.rt);
+			SolidBrush darkishblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
 			SolidBrush blue(D2D1::ColorF(0.0f, 0.0f, 0.4f), mw.rt);
 
 			const auto size = mw.getSize();
@@ -55,11 +63,10 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					// Rita sektioner
 					for (const auto& sect : mw.tracks.data[i].sections)
 					{
-						const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
-						const Placement sectPlace{place.x + place.w + noteSize * (float)sect.timestamp, place.y, sectLen * noteSize, place.h};
+						const Placement sectPlace = sectionPlace(sect, i, noteSize);
 						mw.rt.drawRectangle(
 							sectPlace,
-							blue
+							selectedSection == &sect ? darkishblue : blue
 						);
 						constexpr float outlineW = 2.0f;
 						mw.rt.outlineRectangle(
@@ -161,10 +168,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			const auto size = mw.getSize();
 			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
 			{
+				// Lägg till instrument
 				const std::lock_guard lg(mw.tracks.mtx);
 				if (!mw.tracks.playing.test(std::memory_order::relaxed))
 				{
-					mw.tracks.data.emplace_back(Track{std::make_unique<SinInstrument>(), std::vector<Track::SectionRef>{}});
+					mw.tracks.data.emplace_back(Track{std::make_unique<SinInstrument>(), std::vector<SectionRef>{}});
 					InvalidateRect(mw, nullptr, FALSE);
 				}
 				return 0;
@@ -176,6 +184,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					const auto headPlace = channelHeadPlace(i);
 					if (pressInPlace(mx, my, trackPlusPlace(i)))
 					{
+						// Har tryckt på ett plus
 						if (i == (size_t)selectedTrackPlus)
 						{
 							selectedTrackPlus = -1;
@@ -188,7 +197,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
-					if (i == (size_t)selectedTrackPlus && pressInPlace(
+					if (selectedTrackPlus == -1)
+					{
+						selectedSection = nullptr;
+						// Välj sektion
+						if (pressInPlace(
 							mx,
 							my,
 							Placement{
@@ -198,14 +211,48 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 								headPlace.h
 							}
 						))
-					{
-						mw.tracks.data[i].sections.emplace_back(Track::SectionRef{
-							std::make_shared<Section>(),
-							(mx - (headPlace.x + headPlace.w)) / noteSize
-						});
-						selectedTrackPlus = -1;
+						{
+							for (auto it = mw.tracks.data[i].sections.rbegin();
+								it != mw.tracks.data[i].sections.rend();
+								++it)
+							{
+								const Placement sectPlace = sectionPlace(*it, i, noteSize);
+								if (pressInPlace(
+									mx,
+									my,
+									sectPlace
+								))
+								{
+									selectedSection = &*it;
+									break;
+								}
+							}
+						}
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
+					}
+					else
+					{
+						// Kollar om man ska lägga till en sektion
+						if (i == (size_t)selectedTrackPlus && pressInPlace(
+								mx,
+								my,
+								Placement{
+									headPlace.x + headPlace.w,
+									headPlace.y,
+									size.right - headPlace.x - headPlace.w,
+									headPlace.h
+								}
+							))
+						{
+							mw.tracks.data[i].sections.emplace_back(SectionRef{
+								std::make_shared<Section>(),
+								(mx - (headPlace.x + headPlace.w)) / noteSize
+							});
+							selectedTrackPlus = -1;
+							InvalidateRect(mw, nullptr, FALSE);
+							return 0;
+						}
 					}
 				}
 			}

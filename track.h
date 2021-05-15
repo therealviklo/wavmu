@@ -3,14 +3,14 @@
 #include "instrument.h"
 #include "threadutils.h"
 
+struct SectionRef
+{
+	std::shared_ptr<Section> section;
+	double timestamp;
+};
+
 struct Track
 {
-	struct SectionRef
-	{
-		std::shared_ptr<Section> section;
-		double timestamp;
-	};
-
 	std::unique_ptr<Instrument> instrument;
 	std::vector<SectionRef> sections;
 };

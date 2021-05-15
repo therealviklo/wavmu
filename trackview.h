@@ -8,6 +8,7 @@ private:
 	long long selectedTrackPlus;
 	float addSectionPos;
 	float noteSize;
+	SectionRef* selectedSection;
 public:
 	TrackView();
 
