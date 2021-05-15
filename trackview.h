@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include "gui.h"
+#include "sectionview.h"
 
 class TrackView : public View
 {

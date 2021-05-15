@@ -259,6 +259,15 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			}
 		}
 		break;
+		case WM_LBUTTONDBLCLK:
+		{
+			if (selectedSection)
+			{
+				mw.vpush(std::make_unique<SectionView>(*selectedSection->section));
+				return 0;
+			}
+		}
+		break;
 		case WM_MOUSEMOVE:
 		{
 			if (selectedTrackPlus != -1)

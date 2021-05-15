@@ -25,7 +25,7 @@ private:
 	std::wstring className;
 	bool registered;
 public:
-	WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor);
+	WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor, UINT style = 0);
 	~WindowClass();
 
 	WindowClass(const WindowClass&) = delete;

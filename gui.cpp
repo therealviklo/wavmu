@@ -1,8 +1,15 @@
 #include "gui.h"
 
+const WindowClass specWindowClass(
+	L"specWindowClass",
+	reinterpret_cast<HBRUSH>(COLOR_BACKGROUND),
+	LoadCursorW(nullptr, IDC_ARROW),
+	CS_DBLCLKS
+);
+
 MainWindow::MainWindow() :
 	Window(
-		defWindowClass,
+		specWindowClass,
 		WS_OVERLAPPEDWINDOW,
 		0,
 		L"Wavmu",

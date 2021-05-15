@@ -10,7 +10,7 @@ void updateAllWindows()
 	DispatchMessageW(&msg);
 }
 
-WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor)
+WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor, UINT style)
 	: className(std::move(className)),
 	  registered(false)
 {
@@ -21,6 +21,7 @@ WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSO
 	wc.lpszClassName = this->className.c_str();
 	wc.hbrBackground = backgroundColour + 1;
 	wc.hCursor = cursor;
+	wc.style = style;
 
 	registered = (RegisterClassExW(&wc) != 0U);
 }
