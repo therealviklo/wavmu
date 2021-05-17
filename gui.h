@@ -8,6 +8,7 @@
 #include <windowsx.h>
 #include "instrument.h"
 #include "guiutils.h"
+#include "rsc.h"
 
 class MainWindow;
 
@@ -21,6 +22,7 @@ public:
 	View& operator=(const View&) = delete;
 
 	virtual LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
+	virtual void onResize(WORD /*width*/, WORD /*height*/) {}
 };
 
 class MainWindow : public Window
@@ -31,7 +33,21 @@ public:
 	Tracks tracks;
 	Player player;
 	D2DFactory d2dfac;
+	WICFactory wicfac;
 	RenderTarget rt;
+	struct RSC
+	{
+	private:
+		std::vector<Bitmap> bmps;
+		size_t from;
+	public:
+		RSC(WICFactory& wicfac, RenderTarget& rt);
+
+		constexpr Bitmap& operator[](size_t i) noexcept
+		{
+			return bmps[i - from];
+		}
+	} rsc;
 
 	MainWindow();
 	

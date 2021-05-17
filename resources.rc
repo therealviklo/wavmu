@@ -1,0 +1,2 @@
+#include "rsc.h"
+RSC_TONER RSCT_IMG "gfx/toner.png"

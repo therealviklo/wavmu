@@ -7,6 +7,29 @@ const WindowClass specWindowClass(
 	CS_DBLCLKS
 );
 
+MainWindow::RSC::RSC(WICFactory& wicfac, RenderTarget& rt)
+{
+	from = RSC_TONER;
+	constexpr size_t to = RSC_TONER;
+
+	const HMODULE mod = GetModuleHandleW(nullptr);
+	if (!mod) throw WinError(L"Failed to get module handle");
+
+	bmps.reserve(to - from + 1);
+	for (size_t i = from; i <= to; ++i)
+	{
+		const HRSRC rsrc = FindResourceW(mod, MAKEINTRESOURCEW(i), MAKEINTRESOURCEW(RSCT_DATA));
+		if (!rsrc) throw WinError(L"Failed to find resource");
+		const HGLOBAL glob = LoadResource(mod, rsrc);
+		if (!glob) throw WinError(L"Failed to load resource");
+		const void* const data = LockResource(glob);
+		if (!data) throw NoResWinError(L"Failed to get resource data pointer");
+		const UINT size = SizeofResource(mod, rsrc);
+		if (!size) throw WinError(L"Failed to get resource size");
+		bmps.emplace_back((const char*)data, size, wicfac, rt);
+	}
+}
+
 MainWindow::MainWindow() :
 	Window(
 		specWindowClass,
@@ -18,16 +41,19 @@ MainWindow::MainWindow() :
 		CW_USEDEFAULT,
 		false
 	),
-	rt(*this, d2dfac) {}
+	rt(*this, d2dfac),
+	rsc(wicfac, rt) {}
 
 void MainWindow::vpush(std::unique_ptr<View> view)
 {
 	views.emplace(std::move(view));
+	InvalidateRect(*this, nullptr, FALSE);
 }
 
 void MainWindow::vpop() noexcept
 {
 	views.pop();
+	InvalidateRect(*this, nullptr, FALSE);
 }
 
 LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -36,6 +62,8 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_SIZE:
 		{
+			if (!views.empty())
+				views.top()->onResize(LOWORD(lParam), HIWORD(lParam));
 			rt.resize(LOWORD(lParam), HIWORD(lParam));
 			InvalidateRect(*this, nullptr, FALSE);
 		}

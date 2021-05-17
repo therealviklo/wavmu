@@ -4,6 +4,7 @@
 #include <wrl.h>
 #include <wincodec.h>
 #include "winerror.h"
+#include <Shlwapi.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -64,6 +65,7 @@ public:
 	}
 
 	void drawBitmap(Bitmap& bitmap, float x, float y, float w, float h, float alpha = 1.0f) noexcept;
+	void drawBitmap(Bitmap& bitmap, D2D1_RECT_F dest, D2D1_RECT_F src, float alpha = 1.0f) noexcept;
 	void clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f) noexcept
 	{
 		rt->Clear(D2D1::ColorF(r, g, b, a));
@@ -84,8 +86,10 @@ private:
 	unsigned h;
 
 	void recreateIfOutdated(RenderTarget& rt);
+	void initialiseFromDecoder(IWICBitmapDecoder* decoder, WICFactory& wicfac, RenderTarget& rt);
 public:
 	Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt);
+	Bitmap(const char* data, size_t size, WICFactory& wicfac, RenderTarget& rt);
 
 	constexpr unsigned getWidth() const noexcept { return w; }
 	constexpr unsigned getHeight() const noexcept { return h; }

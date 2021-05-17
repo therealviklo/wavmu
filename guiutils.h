@@ -34,6 +34,16 @@ struct Offset
 	}
 };
 
+inline Offset operator*(const Offset& off, float f) noexcept
+{
+	return {off.x * f, off.y * f};
+}
+
+inline Offset operator/(const Offset& off, float f) noexcept
+{
+	return {off.x / f, off.y / f};
+}
+
 inline Placement operator+(const Placement& place, const Offset& off) noexcept
 {
 	return {place.x + off.x, place.y + off.y, place.w, place.h};
@@ -46,5 +56,36 @@ inline D2D1_RECT_F operator+(const D2D1_RECT_F& rect, const Offset& off)
 		rect.top + off.y,
 		rect.right + off.x,
 		rect.bottom + off.y
+	);
+}
+
+inline D2D1_POINT_2F operator+(const D2D1_POINT_2F& p, const Offset& off)
+{
+	return D2D1::Point2F(
+		p.x + off.x,
+		p.y + off.y
+	);
+}
+
+inline Placement operator-(const Placement& place, const Offset& off) noexcept
+{
+	return {place.x - off.x, place.y - off.y, place.w, place.h};
+}
+
+inline D2D1_RECT_F operator-(const D2D1_RECT_F& rect, const Offset& off)
+{
+	return D2D1::RectF(
+		rect.left - off.x,
+		rect.top - off.y,
+		rect.right - off.x,
+		rect.bottom - off.y
+	);
+}
+
+inline D2D1_POINT_2F operator-(const D2D1_POINT_2F& p, const Offset& off)
+{
+	return D2D1::Point2F(
+		p.x - off.x,
+		p.y - off.y
 	);
 }

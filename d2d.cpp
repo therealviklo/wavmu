@@ -62,6 +62,18 @@ void RenderTarget::drawBitmap(Bitmap& bitmap, float x, float y, float w, float h
 	);
 }
 
+void RenderTarget::drawBitmap(Bitmap& bitmap, D2D1_RECT_F dest, D2D1_RECT_F src, float alpha) noexcept
+{
+	bitmap.recreateIfOutdated(*this);
+	rt->DrawBitmap(
+		bitmap.bmp.Get(),
+		dest,
+		alpha,
+		D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+		src
+	);
+}
+
 void RenderTarget::drawLine(D2D1_POINT_2F a, D2D1_POINT_2F b, SolidBrush& brush, float strokeWidth) noexcept
 {
 	rt->DrawLine(
@@ -103,19 +115,9 @@ void Bitmap::recreateIfOutdated(RenderTarget& rt)
 	}
 }
 
-Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt) :
-	ver(rt.ver)
+void Bitmap::initialiseFromDecoder(IWICBitmapDecoder* decoder, WICFactory& wicfac, RenderTarget& rt)
 {
 	HRESULT hr = 0;
-
-	ComPtr<IWICBitmapDecoder> decoder;
-	if (FAILED(hr = wicfac.factory->CreateDecoderFromFilename(
-		filename,
-		nullptr,
-		GENERIC_READ,
-		WICDecodeMetadataCacheOnDemand,
-		&decoder
-	))) throw WinError(L"Failed to create WIC image decoder", hr);
 
 	ComPtr<IWICBitmapFrameDecode> bmpDcd;
 	if (FAILED(hr = decoder->GetFrame(
@@ -143,6 +145,41 @@ Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt) :
 	const auto size = bmp->GetPixelSize();
 	w = size.width;
 	h = size.height;
+}
+
+Bitmap::Bitmap(const wchar_t* filename, WICFactory& wicfac, RenderTarget& rt) :
+	ver(rt.ver)
+{
+	HRESULT hr = 0;
+
+	ComPtr<IWICBitmapDecoder> decoder;
+	if (FAILED(hr = wicfac.factory->CreateDecoderFromFilename(
+		filename,
+		nullptr,
+		GENERIC_READ,
+		WICDecodeMetadataCacheOnDemand,
+		&decoder
+	))) throw WinError(L"Failed to create WIC image decoder", hr);
+
+	initialiseFromDecoder(decoder.Get(), wicfac, rt);
+}
+
+Bitmap::Bitmap(const char* data, size_t size, WICFactory& wicfac, RenderTarget& rt)
+{
+	HRESULT hr = 0;
+
+	const ComPtr<IStream> memstream(SHCreateMemStream((const BYTE*)data, size));
+	if (!memstream) throw NoResWinError(L"Failed to create memory stream");
+
+	ComPtr<IWICBitmapDecoder> decoder;
+	if (FAILED(hr = wicfac.factory->CreateDecoderFromStream(
+		memstream.Get(),
+		nullptr,
+		WICDecodeMetadataCacheOnDemand,
+		&decoder
+	))) throw WinError(L"Failed to create WIC image decoder", hr);
+
+	initialiseFromDecoder(decoder.Get(), wicfac, rt);
 }
 
 SolidBrush::SolidBrush(D2D1_COLOR_F colour, RenderTarget& rt)
