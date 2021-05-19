@@ -57,8 +57,7 @@ public:
 	// Kastar PlayState::AlreadyPlayingException om låten redan spelas.
 	PlayState(Tracks& tracks, BPM bpm);
 
-	template <bool nocalc = false>
 	SamplePair get(uint32_t sampleRate);
 
-	void skipSamples(uint32_t num, uint32_t sampleRate);
+	void skip(double time);
 };

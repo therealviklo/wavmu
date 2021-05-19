@@ -43,7 +43,28 @@ PlayState::PlayState(Tracks& tracks, BPM bpm)
 	}
 }
 
-template <bool nocalc>
+void advanceSection(SectionRef& currSection, PlayState::SectionPlayState& currIteratorSection, double time, BPM bpm, double position)
+{
+	for (auto& i : currIteratorSection.currNotes)
+	{
+		i.timeElapsed += time;
+	}
+
+	while (currIteratorSection.iterator != currSection.section->notes.end() &&
+			(currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0 <= position)
+	{
+		currIteratorSection.currNotes.push_back({
+			currIteratorSection.iterator->tone,
+			position - (currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0,
+			currIteratorSection.iterator->length / bpm * 240.0
+		});
+
+		currIteratorSection.iterator++;
+	}
+}
+
+/* Hoppas att du inte behöver ändra den här funktionen för
+   då behöver du kanske ändra PlayState::skip() också ;) */
 PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 {
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
@@ -62,22 +83,7 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 			auto& currSection = currTrack.sections[j];
 			auto& currIteratorSection = currIteratorTrack[j];
 
-			for (auto& i : currIteratorSection.currNotes)
-			{
-				i.timeElapsed += 1.0 / sampleRate;
-			}
-
-			while (currIteratorSection.iterator != currSection.section->notes.end() &&
-				   (currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0 <= position)
-			{
-				currIteratorSection.currNotes.push_back({
-					currIteratorSection.iterator->tone,
-					position - (currIteratorSection.iterator->timestamp + currSection.timestamp) / bpm * 240.0,
-					currIteratorSection.iterator->length / bpm * 240.0
-				});
-
-				currIteratorSection.iterator++;
-			}
+			advanceSection(currSection, currIteratorSection, 1.0 / sampleRate, bpm, position);
 
 			for (auto i = currIteratorSection.currNotes.begin(); i != currIteratorSection.currNotes.end(); )
 			{
@@ -87,13 +93,10 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 					continue;
 				}
 
-				if constexpr (!nocalc)
-				{
-					sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
-									* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
-					sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
-									* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
-				}
+				sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
+								* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+				sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
+								* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
 
 				i++;
 			}
@@ -103,15 +106,37 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 	return sp;
 }
 
-template
-PlayState::SamplePair PlayState::get<true>(uint32_t sampleRate);
-template
-PlayState::SamplePair PlayState::get<false>(uint32_t sampleRate);
-
-void PlayState::skipSamples(uint32_t num, uint32_t sampleRate)
+/* Hoppas att du inte behöver ändra den här funktionen för
+   då behöver du kanske ändra PlayState::get() också ;) */
+void PlayState::skip(double time)
 {
-	while (num--)
+	const std::lock_guard<std::mutex> lg(tracks.mtx);
+
+	position += time;
+
+	for (size_t i = 0; i < trackIterators.size(); i++)
 	{
-		get<true>(sampleRate);
+		auto& currTrack = tracks.data[i];
+		auto& currIteratorTrack = trackIterators[i];
+		const Instrument* const currInstrument = currTrack.instrument ? currTrack.instrument.get() : &defaultInstrument;
+		
+		for (size_t j = 0; j < currIteratorTrack.size(); j++)
+		{
+			auto& currSection = currTrack.sections[j];
+			auto& currIteratorSection = currIteratorTrack[j];
+			
+			advanceSection(currSection, currIteratorSection, time, bpm, position);
+
+			for (auto i = currIteratorSection.currNotes.begin(); i != currIteratorSection.currNotes.end(); )
+			{
+				if (i->timeElapsed > i->duration + currInstrument->getReleaseTime())
+				{
+					i = currIteratorSection.currNotes.erase(i);
+					continue;
+				}
+
+				i++;
+			}
+		}
 	}
 }
