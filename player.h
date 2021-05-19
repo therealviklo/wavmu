@@ -67,6 +67,6 @@ public:
 	Player(const Player&) = delete;
 	Player& operator=(const Player&) = delete;
 
-	void start(Tracks& tracks, BPM bpm);
+	void start(Tracks& tracks, BPM bpm, double at = 0.0);
 	void stop();
 };

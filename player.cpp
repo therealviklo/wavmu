@@ -122,12 +122,13 @@ Player::~Player()
 	} catch (...) {}
 }
 
-void Player::start(Tracks& tracks, BPM bpm)
+void Player::start(Tracks& tracks, BPM bpm, double at)
 {
 	{
 		const std::lock_guard<std::mutex> lg(playStateMutex);
 		playState.reset();
 		playState = std::make_unique<PlayState>(tracks, bpm);
+		playState->skipSamples(at, 1);
 	}
 	playingWaiter.requestWakeup();
 }

@@ -120,7 +120,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					}
 					else
 					{
-						mw.player.start(mw.tracks, 240);
+						mw.player.start(mw.tracks, 240, sect.timestamp);
 					}
 				}
 				return 0;

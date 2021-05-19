@@ -43,6 +43,7 @@ PlayState::PlayState(Tracks& tracks, BPM bpm)
 	}
 }
 
+template <bool nocalc>
 PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 {
 	const std::lock_guard<std::mutex> lg(tracks.mtx);
@@ -86,10 +87,13 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 					continue;
 				}
 
-				sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
-								 * currInstrument->envelopeLevel(i->timeElapsed, i->duration);
-				sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
-								 * currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+				if constexpr (!nocalc)
+				{
+					sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
+									* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+					sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
+									* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+				}
 
 				i++;
 			}
@@ -97,4 +101,17 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 	}
 
 	return sp;
+}
+
+template
+PlayState::SamplePair PlayState::get<true>(uint32_t sampleRate);
+template
+PlayState::SamplePair PlayState::get<false>(uint32_t sampleRate);
+
+void PlayState::skipSamples(uint32_t num, uint32_t sampleRate)
+{
+	while (num--)
+	{
+		get<true>(sampleRate);
+	}
 }
