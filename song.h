@@ -22,7 +22,7 @@ struct TimeSignature
 struct Section
 {
 	std::vector<Note> notes;
-	TimeSignature timesig{4u, 4u};
+	TimeSignature timesig{3u, 4u};
 	/* double length; */ // Kanske
 
 	double calcLength();

@@ -4,12 +4,12 @@
 class SectionView : public View
 {
 private:
-	Section& sect;
+	SectionRef& sect;
 	Offset scroll;
 
 	void captureScroll(RECT size);
 public:
-	SectionView(Section& sect) noexcept;
+	SectionView(SectionRef& sect) noexcept;
 	
 	void onResize(WORD /*width*/, WORD /*height*/) override;
 
