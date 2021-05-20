@@ -149,7 +149,11 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					}
 					else
 					{
-						mw.player.start(mw.tracks, 240, sect.timestamp);
+						const double timestamp = [&]() -> double {
+							const std::lock_guard lg(mw.tracks.mtx);
+							return sect.timestamp;
+						}();
+						mw.player.start(mw.tracks, 240, timestamp);
 					}
 				}
 				return 0;
@@ -163,6 +167,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		break;
 		case WM_RBUTTONDOWN:
 		{
+			const std::lock_guard lg(mw.tracks.mtx);
 			const int x = GET_X_LPARAM(lParam); 
 			const int y = GET_Y_LPARAM(lParam); 
 			ns.tone = ns.getTone(y, scroll);
@@ -200,6 +205,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		{
 			if (ns.selecting)
 			{
+				const std::lock_guard lg(mw.tracks.mtx);
 				const int x = GET_X_LPARAM(lParam);
 				ns.end = ns.getTime(x, scroll, sect.section->timesig);
 				InvalidateRect(mw, nullptr, FALSE);
