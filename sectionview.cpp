@@ -72,10 +72,11 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			}
 			for (int i = -scroll.y / noteH; i * noteH + scroll.y < size.bottom; ++i)
 			{
+				const int tone = (255 - i + 11) % 12;
 				mw.rt.drawBitmap(
 					mw.rsc[RSC_TONER],
 					Placement{0.0f, i * noteH, 150.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
-					Placement{0.0f, ((256 - i + 10) % 12) * 50.0f, 150.0f, 50.0f}
+					Placement{0.0f, tone * 50.0f, 150.0f, 50.0f}
 				);
 				mw.rt.drawLine(
 					D2D1::Point2F(0.0f, i * noteH) + scroll.onlyY(),
