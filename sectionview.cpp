@@ -72,11 +72,49 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			}
 			for (int i = -scroll.y / noteH; i * noteH + scroll.y < size.bottom; ++i)
 			{
+				const int tone = (255 - i + 11) % 12;
 				mw.rt.drawBitmap(
 					mw.rsc[RSC_TONER],
 					Placement{0.0f, i * noteH, 150.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
-					Placement{0.0f, ((256 - i + 10) % 12) * 50.0f, 150.0f, 50.0f}
+					Placement{0.0f, tone * 50.0f, 150.0f, 50.0f}
 				);
+
+				if (((255 - i) - 124) % 12 == 0)
+				{
+					int oct = ((255 - i) - 124) / 12 + 4;
+					float off = noteH * 0.4f;
+					if (oct < 0)
+					{
+						mw.rt.drawBitmap(
+							mw.rsc[RSC_TONER],
+							Placement{off, i * noteH, 50.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
+							Placement{150.0f, 10 * 50.0f, 50.0f, 50.0f}
+						);
+						oct = -oct;
+						off += noteH * 0.5f;
+					}
+					// do
+					// {
+					// 	mw.rt.drawBitmap(
+					// 		mw.rsc[RSC_TONER],
+					// 		Placement{off, i * noteH, 50.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
+					// 		Placement{150.0f, (oct % 10) * 50.0f, 50.0f, 50.0f}
+					// 	);
+					// 	oct /= 10;
+					// 	off += noteH * 0.5f;
+					// } while (oct);
+					auto drawOct = [this, &mw, &i, &off](auto& rec, int oct) -> void {
+						if (oct / 10) rec(rec, oct / 10);
+						mw.rt.drawBitmap(
+							mw.rsc[RSC_TONER],
+							Placement{off, i * noteH, 50.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
+							Placement{150.0f, (oct % 10) * 50.0f, 50.0f, 50.0f}
+						);
+						off += noteH * 0.5f;
+					};
+					drawOct(drawOct, oct);
+				}
+
 				mw.rt.drawLine(
 					D2D1::Point2F(0.0f, i * noteH) + scroll.onlyY(),
 					D2D1::Point2F(size.right, i * noteH) + scroll.onlyY(),
