@@ -36,7 +36,7 @@ void SectionView::captureScroll(RECT size)
 
 SectionView::SectionView(SectionRef& sect) noexcept :
 	sect(sect),
-	scroll{0.0f, 0.0f} {}
+	scroll{0.0f, -(255 - 124) * noteH} {}
 
 void SectionView::onResize(WORD width, WORD height)
 {
