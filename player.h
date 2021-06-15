@@ -3,7 +3,7 @@
 #include <mutex>
 #include "utils.h"
 #include <xaudio2.h>
-#include <wrl.h>
+#include <wrl/client.h>
 #include <stdexcept>
 #include <memory>
 #include <condition_variable>

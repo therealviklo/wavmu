@@ -1,7 +1,7 @@
 #pragma once
 #include "win.h"
 #include <d2d1.h>
-#include <wrl.h>
+#include <wrl/client.h>
 #include <wincodec.h>
 #include "winerror.h"
 #include <Shlwapi.h>
