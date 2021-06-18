@@ -3,6 +3,19 @@
 constexpr float noteH = 17.0f;
 constexpr float noteW = 8.0f * noteH;
 
+namespace
+{
+	inline Placement getNotePos(const Note& note, Offset scroll)
+	{
+		return Placement{
+				(float)note.timestamp * noteW,
+				(255 - note.tone) * noteH,
+				(float)note.length * noteW,
+				noteH
+			} + scroll;
+	}
+}
+
 SectionView::NoteSelect::NoteSelect() noexcept :
 	selecting(false),
 	tone(0),
@@ -18,6 +31,20 @@ double SectionView::NoteSelect::getTime(float x, Offset scroll, TimeSignature ti
 {
 	const float qnoteW = noteW / timesig.btm;
 	return std::roundf((x - scroll.x) / qnoteW) * qnoteW / noteW;
+}
+
+void SectionView::deleteNotes(MainWindow& mw)
+{
+	const std::lock_guard lg(mw.tracks.mtx);
+	if (!mw.tracks.playing.test(std::memory_order_relaxed))
+	{
+		std::sort(markedNotes.begin(), markedNotes.end(), std::greater<size_t>());
+		for (const auto& i : markedNotes)
+		{
+			sect.section->notes.erase(sect.section->notes.begin() + i);
+		}
+		markedNotes.clear();
+	}
 }
 
 void SectionView::captureScroll(RECT size)
@@ -55,6 +82,9 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			SolidBrush subtlessgrey(D2D1::ColorF(0.06f, 0.06f, 0.06f), mw.rt);
 			SolidBrush darkblue(D2D1::ColorF(0.0f, 0.0f, 0.2f), mw.rt);
 			SolidBrush blue(D2D1::ColorF(0.0f, 0.0f, 0.4f), mw.rt);
+			SolidBrush markedblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
+			SolidBrush seldarkblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
+			SolidBrush selblue(D2D1::ColorF(0.0f, 0.0f, 0.5f, 0.5f), mw.rt);
 
 			mw.rt.beginDraw();
 			mw.rt.clear(0.1f, 0.1f, 0.1f);
@@ -123,10 +153,10 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 				);
 			}
 
-			auto drawNote = [&](const Placement& r) -> void {
+			auto drawNote = [&](const Placement& r, bool marked = false) -> void {
 				mw.rt.drawRectangle(
 					r,
-					blue
+					marked ? markedblue : blue
 				);
 				mw.rt.outlineRectangle(
 					r,
@@ -134,23 +164,33 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					1.0f
 				);
 			};
-			for (const auto& note : sect.section->notes)
+			for (size_t i = 0; i < sect.section->notes.size(); ++i)
 			{
-				drawNote(Placement{
-					(float)note.timestamp * noteW,
-					(255 - note.tone) * noteH,
-					(float)note.length * noteW,
-					noteH
-				} + scroll);
+				drawNote(
+					getNotePos(sect.section->notes[i], scroll),
+					std::find(
+						markedNotes.begin(),
+						markedNotes.end(),
+						i
+					) != markedNotes.end()
+				);
 			}
 			if (ns.selecting)
 			{
-				drawNote(Placement{
-					(float)ns.start * noteW,
-					(255 - ns.tone) * noteH,
-					(float)(ns.end - ns.start) * noteW,
-					noteH
-				} + scroll);
+				drawNote(getNotePos(Note{ns.start, ns.end - ns.start, ns.tone}, scroll));
+			}
+
+			if (nm.marking)
+			{
+				mw.rt.drawRectangle(
+					nm.reg,
+					selblue
+				);
+				mw.rt.outlineRectangle(
+					nm.reg,
+					seldarkblue,
+					1.0f
+				);
 			}
 
 			if (mw.rt.endDraw(mw.d2dfac))
@@ -200,6 +240,12 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					mw.vpop();
 				}
 				return 0;
+				case VK_DELETE:
+				{
+					deleteNotes(mw);
+					InvalidateRect(mw, nullptr, FALSE);
+				}
+				return 0;
 			}
 		}
 		break;
@@ -239,6 +285,51 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			}
 		}
 		return 0;
+		case WM_LBUTTONDOWN:
+		{
+			const int x = GET_X_LPARAM(lParam);
+			const int y = GET_Y_LPARAM(lParam);
+			nm.marking = true;
+			nm.reg.left = x;
+			nm.reg.top = y;
+			nm.reg.right = x;
+			nm.reg.bottom = y;
+			InvalidateRect(mw, nullptr, FALSE);
+		}
+		return 0;
+		case WM_LBUTTONUP:
+		{
+			if (nm.marking)
+			{
+				const int x = GET_X_LPARAM(lParam);
+				const int y = GET_Y_LPARAM(lParam);
+				nm.marking = false;
+				nm.reg.right = x;
+				nm.reg.bottom = y;
+
+				if (nm.reg.right < nm.reg.left)
+				{
+					std::swap(nm.reg.right, nm.reg.left);
+				}
+				if (nm.reg.bottom < nm.reg.top)
+				{
+					std::swap(nm.reg.bottom, nm.reg.top);
+				}
+
+				markedNotes.clear();
+				const std::lock_guard lg(mw.tracks.mtx);
+				for (size_t i = 0; i < sect.section->notes.size(); ++i)
+				{
+					if (rectsColliding(nm.reg, getNotePos(sect.section->notes[i], scroll)))
+					{
+						markedNotes.push_back(i);
+					}
+				}
+				InvalidateRect(mw, nullptr, FALSE);
+				return 0;
+			}
+		}
+		break;
 		case WM_MOUSEMOVE:
 		{
 			if (ns.selecting)
@@ -246,6 +337,15 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 				const std::lock_guard lg(mw.tracks.mtx);
 				const int x = GET_X_LPARAM(lParam);
 				ns.end = ns.getTime(x, scroll, sect.section->timesig);
+				InvalidateRect(mw, nullptr, FALSE);
+				return 0;
+			}
+			if (nm.marking)
+			{
+				const int x = GET_X_LPARAM(lParam);
+				const int y = GET_Y_LPARAM(lParam);
+				nm.reg.right = x;
+				nm.reg.bottom = y;
 				InvalidateRect(mw, nullptr, FALSE);
 				return 0;
 			}

@@ -17,6 +17,10 @@ struct Placement
 };
 
 bool pressInPlace(float x, float y, Placement place);
+/* Använder D2D1_RECT_F här för att funktionen ska bli enklare
+   att implementera (och för att SectionView::NoteMark::reg inte
+   ska behöva konverteras.) */
+bool rectsColliding(D2D1_RECT_F a, D2D1_RECT_F b);
 
 struct Offset
 {
