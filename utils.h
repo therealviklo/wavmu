@@ -7,6 +7,8 @@
 #include <memory>
 #include <concepts>
 #include <cmath>
+#include <vector>
+#include <fstream>
 #include "win.h"
 #include "werror.h"
 
@@ -71,3 +73,17 @@ struct UHandleHelper
 template <typename T, auto Closer>
 	requires std::is_pointer_v<T>
 using UHandle = std::unique_ptr<std::remove_pointer_t<T>, UHandleHelper<T, Closer>>;
+
+inline std::vector<unsigned char> readfile(const char* file)
+{
+	std::ifstream fs;
+	fs.exceptions(std::ios::failbit | std::ios::badbit);
+	fs.open(file, std::ios::in | std::ios::binary);
+	fs.seekg(0, std::ios::end);
+	const size_t size = fs.tellg();
+	fs.seekg(0, std::ios::beg);
+	std::vector<unsigned char> data;
+	data.resize(size);
+	fs.read(reinterpret_cast<char*>(data.data()), size);
+	return data;
+}

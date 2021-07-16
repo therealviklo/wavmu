@@ -1,7 +1,7 @@
 ﻿#include "instrument.h"
 
 SampleInstrument::SampleInstrument(const char* file)
-	: wave(file),
+	: wave(decodeFile(file)),
 	  tone(60)
 {
 	envelope = {0.1, 0.1, 0.75, 0.1};

@@ -3,7 +3,7 @@
 #include <vector>
 #include <numbers>
 #include <mutex>
-#include "wav.h"
+#include "codec.h"
 #include "song.h"
 #include "envelope.h"
 

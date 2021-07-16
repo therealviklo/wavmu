@@ -10,14 +10,17 @@ typedef int32_t Sample;
 
 class Wave
 {
-private:
-	struct {
+public:
+	struct Info
+	{
 		uint16_t channels;
 		uint32_t sampleRate;
-	} info;
+	};
+private:
+	Info info;
 	std::vector<Sample> data;
 public:
-	Wave(const char* file);
+	Wave(std::vector<Sample> data, Info info);
 
 	uint16_t getChannels() const noexcept {return info.channels;}
 	uint32_t getSampleRate() const noexcept {return info.sampleRate;}

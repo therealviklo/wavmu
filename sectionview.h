@@ -8,7 +8,7 @@ private:
 	SectionRef& sect;
 	Offset scroll;
 	/* Av någon anledning så kallade jag det här för "NoteSelect"
-	   fast det används när man ska skapa noter, inte välja dem ... */
+	   fastän det används när man ska skapa noter, inte välja dem ... */
 	struct NoteSelect
 	{
 		bool selecting;
