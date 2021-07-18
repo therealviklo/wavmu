@@ -160,7 +160,7 @@ namespace Encode
 		write(uint32_t(wave.getSampleRate()));
 		write(uint32_t(wave.getSampleRate() * wave.getChannels() * sizeof(Sample)));
 		write(uint16_t(wave.getChannels() * sizeof(Sample)));
-		write(uint16_t(sizeof(Sample)));
+		write(uint16_t(sizeof(Sample) * 8));
 
 		writestr("data");
 		write(uint32_t(wave.getData().size() * sizeof(Sample)));
