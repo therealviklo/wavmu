@@ -185,8 +185,8 @@ namespace
 Wave decodeFile(const char* file)
 {
 	const std::string ext = tolc(std::filesystem::path(file).extension().string());
-	if (ext == "wav" ||
-		ext == "wave")
+	if (ext == ".wav" ||
+		ext == ".wave")
 	{
 		const std::vector<unsigned char> data = readfile(file);
 		return Decode::wave(data.data(), data.size());
@@ -197,8 +197,8 @@ Wave decodeFile(const char* file)
 void encodeFile(const char* file, const Wave& wave)
 {
 	const std::string ext = tolc(std::filesystem::path(file).extension().string());
-	if (ext == "wav" ||
-		ext == "wave")
+	if (ext == ".wav" ||
+		ext == ".wave")
 	{
 		const std::vector<unsigned char> data = Encode::wave(wave);
 		writefile(file, data.data(), data.size());
