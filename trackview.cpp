@@ -349,6 +349,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					}
 				}
 				return 0;
+				case 'X':
+				{
+					exportSong(mw.tracks, 240, "test.wav");
+				}
+				return 0;
 			}
 		}
 		break;

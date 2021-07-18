@@ -3,6 +3,8 @@
 #include "gui.h"
 #include "sectionview.h"
 
+#include "export.h"
+
 class TrackView : public View
 {
 private:

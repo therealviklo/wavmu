@@ -137,12 +137,13 @@ namespace Encode
 	{
 		std::vector<unsigned char> op(44 + wave.getData().size() * sizeof(Sample));
 		unsigned char* cur = op.data();
-		auto writed = [&](const auto* data, size_t size) -> void {
-			std::memcpy(cur, data, size * sizeof(*data));
-			cur += size * sizeof(*data);
+		auto writed = [&](const auto* data, size_t num) -> void {
+			std::memcpy(cur, data, num * sizeof(*data));
+			cur += num * sizeof(*data);
 		};
 		auto write = [&](const auto& x) -> void {
-			writed(&x, sizeof(x));
+			std::memcpy(cur, &x, sizeof(x));
+			cur += sizeof(x);
 		};
 		auto writestr = [&](const char* str) -> void {
 			while (*str) *cur++ = *str++;
@@ -164,6 +165,8 @@ namespace Encode
 		writestr("data");
 		write(uint32_t(wave.getData().size() * sizeof(Sample)));
 		writed(wave.getData().data(), wave.getData().size());
+
+		return op;
 	}
 }
 
@@ -203,5 +206,8 @@ void encodeFile(const char* file, const Wave& wave)
 		const std::vector<unsigned char> data = Encode::wave(wave);
 		writefile(file, data.data(), data.size());
 	}
-	throw WRE(L"Unknown file type");
+	else
+	{
+		throw WRE(L"Unknown file type");
+	}
 }
