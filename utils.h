@@ -87,3 +87,11 @@ inline std::vector<unsigned char> readfile(const char* file)
 	fs.read(reinterpret_cast<char*>(data.data()), size);
 	return data;
 }
+
+inline void writefile(const char* file, const unsigned char* data, size_t size)
+{
+	std::ofstream fs;
+	fs.exceptions(std::ios::failbit | std::ios::badbit);
+	fs.open(file, std::ios::out | std::ios::binary | std::ios::trunc);
+	fs.write(reinterpret_cast<const char*>(data), size);
+}

@@ -26,4 +26,5 @@ public:
 	uint32_t getSampleRate() const noexcept {return info.sampleRate;}
 
 	Sample at(double pos, uint16_t channel, double pitchShift) const;
+	const std::vector<Sample>& getData() const noexcept { return data; }
 };

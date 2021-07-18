@@ -11,9 +11,15 @@
 
 typedef int32_t Sample;
 
-namespace Decoder
+namespace Decode
 {
 	Wave wave(const unsigned char* data, size_t size);
 }
 
+namespace Encode
+{
+	std::vector<unsigned char> wave(const Wave& wave);
+}
+
 Wave decodeFile(const char* file);
+void encodeFile(const char* file, const Wave& wave);

@@ -49,7 +49,7 @@ namespace
 	};
 }
 
-namespace Decoder
+namespace Decode
 {
 	Wave wave(const unsigned char* data, size_t size)
 	{
@@ -131,9 +131,46 @@ namespace Decoder
 	}
 }
 
-Wave decodeFile(const char* file)
+namespace Encode
 {
-	auto tolc = [](const std::string& str) -> std::string {
+	std::vector<unsigned char> wave(const Wave& wave)
+	{
+		std::vector<unsigned char> op(44 + wave.getData().size() * sizeof(Sample));
+		unsigned char* cur = op.data();
+		auto writed = [&](const auto* data, size_t size) -> void {
+			std::memcpy(cur, data, size * sizeof(*data));
+			cur += size * sizeof(*data);
+		};
+		auto write = [&](const auto& x) -> void {
+			writed(&x, sizeof(x));
+		};
+		auto writestr = [&](const char* str) -> void {
+			while (*str) *cur++ = *str++;
+		};
+
+		writestr("RIFF");
+		write(uint32_t(op.size() - 8));
+		writestr("WAVE");
+
+		writestr("fmt ");
+		write(uint32_t(16));
+		write(uint16_t(1));
+		write(uint16_t(wave.getChannels()));
+		write(uint32_t(wave.getSampleRate()));
+		write(uint32_t(wave.getSampleRate() * wave.getChannels() * sizeof(Sample)));
+		write(uint16_t(wave.getChannels() * sizeof(Sample)));
+		write(uint16_t(sizeof(Sample)));
+
+		writestr("data");
+		write(uint32_t(wave.getData().size() * sizeof(Sample)));
+		writed(wave.getData().data(), wave.getData().size());
+	}
+}
+
+namespace
+{
+	std::string tolc(const std::string& str)
+	{
 		std::string cpy = str;
 		std::transform(
 			str.begin(),
@@ -142,13 +179,29 @@ Wave decodeFile(const char* file)
 			[](unsigned char c) -> unsigned char { return std::tolower(c); }
 		);
 		return cpy;
-	};
+	}
+}
+
+Wave decodeFile(const char* file)
+{
 	const std::string ext = tolc(std::filesystem::path(file).extension().string());
 	if (ext == "wav" ||
 		ext == "wave")
 	{
 		const std::vector<unsigned char> data = readfile(file);
-		return Decoder::wave(data.data(), data.size());
+		return Decode::wave(data.data(), data.size());
+	}
+	throw WRE(L"Unknown file type");
+}
+
+void encodeFile(const char* file, const Wave& wave)
+{
+	const std::string ext = tolc(std::filesystem::path(file).extension().string());
+	if (ext == "wav" ||
+		ext == "wave")
+	{
+		const std::vector<unsigned char> data = Encode::wave(wave);
+		writefile(file, data.data(), data.size());
 	}
 	throw WRE(L"Unknown file type");
 }
