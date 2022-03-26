@@ -9,6 +9,9 @@
 #include "instrument.h"
 #include "guiutils.h"
 #include "rsc.h"
+#include "save.h"
+#include "filedialogue.h"
+#include "export.h"
 
 class MainWindow;
 

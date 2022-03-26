@@ -36,6 +36,15 @@ MainWindow::MainWindow() :
 		WS_OVERLAPPEDWINDOW,
 		0,
 		L"Wavmu",
+		Menu({
+			MenuItem::SubMenu{
+				L"Arkiv",
+				Menu({
+					MenuItem::String{L"Spara projekt som...", 201},
+					MenuItem::String{L"Öppna projekt...", 202},
+					MenuItem::String{L"Exportera som...", 203}
+				})
+			}}),
 		nullptr,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
@@ -68,6 +77,40 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			InvalidateRect(*this, nullptr, FALSE);
 		}
 		return 0;
+		case WM_COMMAND:
+		{
+			if (HIWORD(wParam) == 0)
+			{
+				switch (LOWORD(wParam))
+				{
+					case 201:
+					{
+						const std::optional<std::string> file = fileSaveDialogue(L"wmu");
+						if (file)
+							saveSong(tracks, file->c_str());
+					}
+					return 0;
+					case 202:
+					{
+						const std::optional<std::string> file = fileOpenDialogue(L"wmu");
+						if (file)
+						{
+							loadSong(tracks, file->c_str());
+							InvalidateRect(*this, nullptr, FALSE);
+						}
+					}
+					return 0;
+					case 203:
+					{
+						const std::optional<std::string> file = fileSaveDialogue(L"wav");
+						if (file)
+							exportSong(tracks, 240, file->c_str());
+					}
+					return 0;
+				}
+			}
+		}
+		break;
 	}
 	if (!views.empty())
 		return views.top()->wndProc(*this, msg, wParam, lParam);

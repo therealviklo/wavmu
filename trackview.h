@@ -2,10 +2,6 @@
 #include <algorithm>
 #include "gui.h"
 #include "sectionview.h"
-#include "save.h"
-#include "filedialogue.h"
-
-#include "export.h"
 
 class TrackView : public View
 {
