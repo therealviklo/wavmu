@@ -354,6 +354,17 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					exportSong(mw.tracks, 240, "test.wav");
 				}
 				return 0;
+				case 'S':
+				{
+					saveSong(mw.tracks, "test.wmu");
+				}
+				return 0;
+				case 'L':
+				{
+					loadSong(mw.tracks, "test.wmu");
+					InvalidateRect(mw, nullptr, FALSE);
+				}
+				return 0;
 			}
 		}
 		break;

@@ -15,14 +15,14 @@ struct Note
 
 struct TimeSignature
 {
-	unsigned top; // Nämnare
-	unsigned btm; // Täljare
+	unsigned top; // Täljare
+	unsigned btm; // Nämnare
 };
 
 struct Section
 {
 	std::vector<Note> notes;
-	TimeSignature timesig{3u, 4u};
+	TimeSignature timesig{4u, 4u};
 	/* double length; */ // Kanske
 
 	double calcLength();

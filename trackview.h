@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "gui.h"
 #include "sectionview.h"
+#include "save.h"
 
 #include "export.h"
 
