@@ -3,6 +3,7 @@
 #include "gui.h"
 #include "sectionview.h"
 #include "save.h"
+#include "filedialogue.h"
 
 #include "export.h"
 

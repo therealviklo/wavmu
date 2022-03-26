@@ -3,7 +3,6 @@
 #include <mutex>
 #include "utils.h"
 #include <xaudio2.h>
-#include <wrl/client.h>
 #include <stdexcept>
 #include <memory>
 #include <condition_variable>
@@ -12,8 +11,6 @@
 #include "threadutils.h"
 #include "winerror.h"
 #include "lippincott.h"
-
-using Microsoft::WRL::ComPtr;
 
 template <class T>
 void voiceDeleter(T* voice)

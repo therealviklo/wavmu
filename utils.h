@@ -10,7 +10,10 @@
 #include <vector>
 #include <fstream>
 #include "win.h"
+#include <wrl/client.h>
 #include "werror.h"
+
+using Microsoft::WRL::ComPtr;
 
 inline std::string wstringToString(const std::wstring& s)
 {

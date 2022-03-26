@@ -351,18 +351,26 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				return 0;
 				case 'X':
 				{
-					exportSong(mw.tracks, 240, "test.wav");
+					const std::optional<std::string> file = fileSaveDialogue(L"wav");
+					if (file)
+						exportSong(mw.tracks, 240, file->c_str());
 				}
 				return 0;
 				case 'S':
 				{
-					saveSong(mw.tracks, "test.wmu");
+					const std::optional<std::string> file = fileSaveDialogue(L"wmu");
+					if (file)
+						saveSong(mw.tracks, file->c_str());
 				}
 				return 0;
 				case 'L':
 				{
-					loadSong(mw.tracks, "test.wmu");
-					InvalidateRect(mw, nullptr, FALSE);
+					const std::optional<std::string> file = fileOpenDialogue(L"wmu");
+					if (file)
+					{
+						loadSong(mw.tracks, file->c_str());
+						InvalidateRect(mw, nullptr, FALSE);
+					}
 				}
 				return 0;
 			}
