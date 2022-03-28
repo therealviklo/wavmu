@@ -21,6 +21,16 @@ void Player::loop()
 				{
 					while (true)
 					{
+						if (playState->done())
+						{
+							playState.reset();
+							{
+								const std::lock_guard<std::mutex> lg(comMutex);
+								sourceVoice->FlushSourceBuffers();
+							}
+							break;
+						}
+
 						if (!running.load(std::memory_order_relaxed)) break;
 						{
 							const std::lock_guard<std::mutex> lg(comMutex);

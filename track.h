@@ -58,6 +58,6 @@ public:
 	PlayState(Tracks& tracks, BPM bpm);
 
 	SamplePair get(uint32_t sampleRate);
-
 	void skip(double time);
+	bool done();
 };

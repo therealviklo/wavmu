@@ -140,3 +140,24 @@ void PlayState::skip(double time)
 		}
 	}
 }
+
+bool PlayState::done()
+{
+	for (size_t i = 0; i < trackIterators.size(); i++)
+	{
+		auto& currTrack = tracks.data[i];
+		auto& currIteratorTrack = trackIterators[i];
+		
+		for (size_t j = 0; j < currIteratorTrack.size(); j++)
+		{
+			auto& currSection = currTrack.sections[j];
+			auto& currIteratorSection = currIteratorTrack[j];
+
+			if (currIteratorSection.iterator != currSection.section->notes.end())
+				return false;
+			if (!currIteratorSection.currNotes.empty())
+				return false;
+		}
+	}
+	return true;
+}
