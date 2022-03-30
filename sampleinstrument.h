@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include "winerror.h"
 #include "instrument.h"
 
 class SampleInstrument : public Instrument
