@@ -12,6 +12,7 @@
 #include "save.h"
 #include "filedialogue.h"
 #include "export.h"
+#include "id.h"
 
 class MainWindow;
 

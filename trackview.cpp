@@ -169,11 +169,20 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
 			{
 				// Lägg till instrument
-				const std::lock_guard lg(mw.tracks.mtx);
-				if (!mw.tracks.playing.test(std::memory_order::relaxed))
+				std::unique_ptr<wchar_t[]> instrName((wchar_t*)displayDialogueBox(createTrack, mw));
+				if (instrName)
 				{
-					mw.tracks.data.emplace_back(Track{std::make_unique<SinInstrument>(), std::vector<SectionRef>{}});
-					InvalidateRect(mw, nullptr, FALSE);
+					const std::lock_guard lg(mw.tracks.mtx);
+					if (!mw.tracks.playing.test(std::memory_order::relaxed))
+					{
+						mw.tracks.data.emplace_back(
+							Track{
+								createInstrument(wstringToString(instrName.get()).c_str()),
+								std::vector<SectionRef>{}
+							}
+						);
+						InvalidateRect(mw, nullptr, FALSE);
+					}
 				}
 				return 0;
 			}

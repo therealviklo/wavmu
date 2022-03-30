@@ -17,6 +17,9 @@ using Microsoft::WRL::ComPtr;
 
 inline std::string wstringToString(const std::wstring& s)
 {
+	if (s.empty())
+		return "";
+
 	size_t len = WideCharToMultiByte(
 		CP_UTF8,
 		0,
@@ -44,6 +47,9 @@ inline std::string wstringToString(const std::wstring& s)
 
 inline std::wstring stringToWstring(const std::string& s)
 {
+	if (s.empty())
+		return L"";
+
 	size_t len = MultiByteToWideChar(
 		CP_UTF8,
 		0,

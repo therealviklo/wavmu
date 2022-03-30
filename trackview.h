@@ -3,6 +3,8 @@
 #include "gui.h"
 #include "sectionview.h"
 #include "sininstrument.h"
+#include "createtrack.h"
+#include "createinstrument.h"
 
 class TrackView : public View
 {

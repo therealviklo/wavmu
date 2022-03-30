@@ -40,9 +40,9 @@ MainWindow::MainWindow() :
 			MenuItem::SubMenu{
 				L"Arkiv",
 				Menu({
-					MenuItem::String{L"Spara projekt som...", 201},
-					MenuItem::String{L"Öppna projekt...", 202},
-					MenuItem::String{L"Exportera som...", 203}
+					MenuItem::String{L"Spara projekt som...", ID::saveProject},
+					MenuItem::String{L"Öppna projekt...", ID::openProject},
+					MenuItem::String{L"Exportera som...", ID::exportSong}
 				})
 			}}),
 		nullptr,
@@ -83,14 +83,14 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			{
 				switch (LOWORD(wParam))
 				{
-					case 201:
+					case ID::saveProject:
 					{
 						const std::optional<std::string> file = fileSaveDialogue(L"wmu");
 						if (file)
 							saveSong(tracks, file->c_str());
 					}
 					return 0;
-					case 202:
+					case ID::openProject:
 					{
 						const std::optional<std::string> file = fileOpenDialogue(L"wmu");
 						if (file)
@@ -100,7 +100,7 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 						}
 					}
 					return 0;
-					case 203:
+					case ID::exportSong:
 					{
 						const std::optional<std::string> file = fileSaveDialogue(L"wav");
 						if (file)
