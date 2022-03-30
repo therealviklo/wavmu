@@ -9,7 +9,7 @@ std::unique_ptr<Instrument> createInstrument(const char* name)
 
 	try
 	{
-		return std::make_unique<SampleInstrument>(std::filesystem::path(std::getenv("USERPROFILE")) / name);
+		return std::make_unique<SampleInstrument>(name);
 	}
 	catch (const std::exception& e)
 	{

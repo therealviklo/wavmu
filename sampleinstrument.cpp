@@ -1,7 +1,7 @@
 #include "sampleinstrument.h"
 
 SampleInstrument::SampleInstrument(const char* file) :
-	wave(decodeFile(file)),
+	wave(decodeFile((std::filesystem::path(std::getenv("USERPROFILE")) / ".instruments" / file).string().c_str())),
 	tone(60),
 	name(file)
 {
