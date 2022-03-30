@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "gui.h"
 #include "sectionview.h"
+#include "sininstrument.h"
 
 class TrackView : public View
 {
