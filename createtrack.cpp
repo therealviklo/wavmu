@@ -5,15 +5,15 @@ using namespace std::literals;
 const DialogueBox createTrack{
 	DialogueBoxData{
 		WS_CAPTION | WS_POPUPWINDOW,
-		120,
-		70,
+		110,
+		50,
 		L"Skapa spår"s
 	},
 	std::vector<DialogueBoxItemData>{
 		{
 			WS_CHILD | WS_VISIBLE | SS_LEFT,
-			10,
-			10,
+			5,
+			5,
 			100,
 			10,
 			ID::instrNameLbl,
@@ -22,8 +22,8 @@ const DialogueBox createTrack{
 		},
 		{
 			WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-			10,
-			30,
+			5,
+			20,
 			100,
 			10,
 			ID::instrNameBox,
@@ -32,8 +32,8 @@ const DialogueBox createTrack{
 		},
 		{
 			WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | WS_TABSTOP,
-			80,
-			50,
+			70,
+			35,
 			30,
 			10,
 			ID::createTrackBtn,
