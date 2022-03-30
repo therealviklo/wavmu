@@ -9,7 +9,7 @@ std::filesystem::path getExecutableFolder()
 }
 
 SampleInstrument::SampleInstrument(const char* file) :
-	wave(decodeFile((getExecutableFolder() / ".instruments" / file).string().c_str())),
+	wave(decodeFile((getExecutableFolder() / "instruments" / file).string().c_str())),
 	tone(60),
 	name(file)
 {
