@@ -34,10 +34,10 @@ namespace
 	T read(BoundCursor& cur)
 	{
 		T i = 0;
-		for (uint8_t i = 0; i < sizeof(T); i++)
+		for (uint8_t j = 0; j < sizeof(T); j++)
 		{
 			const T b = cur.get();
-			i += (b << (i * 8));
+			i += (b << (j * 8));
 		}
 		return i;
 	};
