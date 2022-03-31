@@ -2,6 +2,8 @@
 
 using namespace std::literals;
 
+constexpr inline const wchar_t* defInstrName = L"Sinus";
+
 const DialogueBox createTrack{
 	DialogueBoxData{
 		WS_CAPTION | WS_POPUPWINDOW,
@@ -18,16 +20,16 @@ const DialogueBox createTrack{
 			10,
 			ID::instrNameLbl,
 			DlgItemClass::label,
-			L"Intrumentnamn (tom för pip)"s
+			L"Intrument"s
 		},
 		{
-			WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
+			WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | CBS_DROPDOWNLIST,
 			5,
 			20,
 			100,
 			10,
 			ID::instrNameBox,
-			DlgItemClass::edit,
+			DlgItemClass::comboBox,
 			L""s
 		},
 		{
@@ -84,6 +86,44 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 			setFont(ID::instrNameLbl);
 			setFont(ID::instrNameBox);
 			setFont(ID::instrNameLbl);
+
+			auto addComboItem = [&](const wchar_t* item) -> void {
+				SendMessageW(
+					GetDlgItem(hDlg, ID::instrNameBox),
+					CB_ADDSTRING,
+					0,
+					(LPARAM)item
+				);
+			};
+
+			addComboItem(defInstrName);
+			
+			try
+			{
+				const fs::path instrFolder = getInstrumentsFolder();
+				if (fs::exists(instrFolder))
+				{
+					for (const auto& i : fs::directory_iterator(instrFolder))
+					{
+						if (!i.is_directory())
+						{
+							addComboItem(i.path().wstring().c_str());
+						}
+					}
+				}
+			}
+			catch (...)
+			{
+				lippincott();
+				std::exit(0);
+			}
+
+			SendMessageW(
+				GetDlgItem(hDlg, ID::instrNameBox),
+				CB_SETCURSEL,
+				0,
+				0
+			);
 			// RegisterHotKey(
 			// 	hDlg,
 			// 	CreateTrackDlgHotKey::esc,
@@ -130,6 +170,11 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 							bufsize
 						) != 0)
 						{
+							if (std::wcscmp(buf.get(), defInstrName) == 0)
+							{
+								buf[0] = '\0';
+							}
+
 							EndDialog(hDlg, (INT_PTR)buf.release());
 							return TRUE;
 						}

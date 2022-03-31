@@ -1,6 +1,8 @@
 #pragma once
+#include <cwchar>
 #include "dialogue.h"
 #include "id.h"
+#include "fs.h"
 
 extern const DialogueBox createTrack;
 

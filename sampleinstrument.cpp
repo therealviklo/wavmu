@@ -1,15 +1,7 @@
 #include "sampleinstrument.h"
 
-std::filesystem::path getExecutableFolder()
-{
-	wchar_t path[MAX_PATH];
-	if (!GetModuleFileNameW(nullptr, path, MAX_PATH))
-		throw WinError(L"Failed to get executable file name");
-	return std::filesystem::path(path).parent_path();
-}
-
 SampleInstrument::SampleInstrument(const char* file) :
-	wave(decodeFile((getExecutableFolder() / "instruments" / file).string().c_str())),
+	wave(decodeFile((getInstrumentsFolder() / file).string().c_str())),
 	tone(60),
 	name(file)
 {

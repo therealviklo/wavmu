@@ -1,7 +1,7 @@
 #pragma once
-#include <filesystem>
 #include "winerror.h"
 #include "instrument.h"
+#include "fs.h"
 
 class SampleInstrument : public Instrument
 {
