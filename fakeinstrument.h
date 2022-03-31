@@ -1,14 +1,12 @@
 #pragma once
-#include "instrument.h"
+#include "sininstrument.h"
 
-class FakeInstrument : public Instrument
+class FakeInstrument : public SinInstrument
 {
 private:
 	std::string name;
 public:
 	FakeInstrument(std::string name);
-
-	Sample at(double pos, uint16_t channel, Tone tone) const override;
 
 	std::string getName() const override;
 };

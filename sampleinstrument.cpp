@@ -2,7 +2,7 @@
 
 SampleInstrument::SampleInstrument(const char* file) :
 	wave(decodeFile((getInstrumentsFolder() / file).string().c_str())),
-	tone(60),
+	tone(133),
 	name(file)
 {
 	envelope = {0.1, 0.1, 0.75, 0.1};
@@ -10,7 +10,7 @@ SampleInstrument::SampleInstrument(const char* file) :
 	
 Sample SampleInstrument::at(double pos, uint16_t channel, Tone tone) const
 {
-	return wave.at(pos, channel, pow(2.0, (tone - this->tone) / 12.0));
+	return 500000 * wave.at(pos, channel, pow(2.0, (this->tone - (double)tone) / 12.0));
 }
 
 std::string SampleInstrument::getName() const
