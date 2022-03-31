@@ -66,13 +66,13 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 	));
 	switch (msg)
 	{
-		// struct CreateTrackDlgHotKey
-		// {
-		// 	enum CreateTrackDlgHotKey_t : int
-		// 	{
-		// 		esc
-		// 	};
-		// };
+		struct CreateTrackDlgHotKey
+		{
+			enum CreateTrackDlgHotKey_t : int
+			{
+				esc
+			};
+		};
 		case WM_INITDIALOG:
 		{
 			auto setFont = [&](int item){
@@ -107,7 +107,7 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 					{
 						if (!i.is_directory())
 						{
-							addComboItem(i.path().wstring().c_str());
+							addComboItem(i.path().filename().wstring().c_str());
 						}
 					}
 				}
@@ -118,46 +118,41 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 				std::exit(0);
 			}
 
-			// SendMessageW(
-			// 	GetDlgItem(hDlg, ID::instrNameBox),
-			// 	CB_SETITEMHEIGHT,
-			// 	1,
-			// 	100
-			// );
 			SendMessageW(
 				GetDlgItem(hDlg, ID::instrNameBox),
 				CB_SETCURSEL,
 				0,
 				0
 			);
-			// RegisterHotKey(
-			// 	hDlg,
-			// 	CreateTrackDlgHotKey::esc,
-			// 	0,
-			// 	VK_ESCAPE
-			// );
+			RegisterHotKey(
+				hDlg,
+				CreateTrackDlgHotKey::esc,
+				0,
+				VK_ESCAPE
+			);
 		}
 		return TRUE;
-		// case WM_DESTROY:
-		// {
-		// 	UnregisterHotKey(
-		// 		hDlg,
-		// 		CreateTrackDlgHotKey::esc
-		// 	);
-		// }
-		// return TRUE;
-		// case WM_KEYDOWN:
-		// {
-		// 	switch (wParam)
-		// 	{
-		// 		case VK_ESCAPE:
-		// 		{
-		// 			EndDialog(hDlg, 0);
-		// 		}
-		// 		return TRUE;
-		// 	}
-		// }
-		// break;
+		case WM_DESTROY:
+		{
+			UnregisterHotKey(
+				hDlg,
+				CreateTrackDlgHotKey::esc
+			);
+		}
+		return TRUE;
+		case WM_HOTKEY:
+		{
+			switch (wParam)
+			{
+				case CreateTrackDlgHotKey::esc:
+				{
+					EndDialog(hDlg, 0);
+					SetLastError(0);
+				}
+				return TRUE;
+			}
+		}
+		return TRUE;
 		case WM_COMMAND:
 		{
 			switch (LOWORD(wParam))
@@ -182,20 +177,20 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 							}
 
 							EndDialog(hDlg, (INT_PTR)buf.release());
-							// SetLastError(0);
+							SetLastError(0);
 							return TRUE;
 						}
 						else if (!GetLastError())
 						{
 							buf[0] = L'\0';
 							EndDialog(hDlg, (INT_PTR)buf.release());
-							// SetLastError(0);
+							SetLastError(0);
 							return TRUE;
 						}
 					}
 					catch (...) {}
 					EndDialog(hDlg, 0);
-					// SetLastError(0);
+					SetLastError(0);
 				}
 				return TRUE;
 			}
@@ -204,7 +199,7 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 		case WM_CLOSE:
 		{
 			EndDialog(hDlg, 0);
-			// SetLastError(0);
+			SetLastError(0);
 		}
 		return TRUE;
 	}
