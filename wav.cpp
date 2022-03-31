@@ -9,7 +9,7 @@ Sample Wave::at(double pos, uint16_t channel, double pitchShift) const
 	const double samplePos = fmod(pos / pitchShift * info.sampleRate, data.size() / info.channels);
 	return std::lerp(
 		data.at(floor(samplePos) * info.channels + channel),
-		data.at(floor(samplePos) * info.channels + channel + info.channels),
+		data.at((static_cast<uint16_t>(floor(samplePos)) * info.channels + channel + info.channels) % data.size()),
 		fmod(samplePos, 1.0)
 	);
 }
