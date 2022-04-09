@@ -10,7 +10,7 @@ SampleInstrument::SampleInstrument(const char* file) :
 	
 Sample SampleInstrument::at(double pos, uint16_t channel, Tone tone) const
 {
-	return 500000 * wave.at(pos, channel, pow(2.0, (this->tone - (double)tone) / 12.0));
+	return wave.at(pos, channel, pow(2.0, (this->tone - (double)tone) / 12.0));
 }
 
 std::string SampleInstrument::getName() const

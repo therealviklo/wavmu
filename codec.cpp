@@ -77,6 +77,9 @@ namespace Decode
 			bitsPerSample != 24 &&
 			bitsPerSample != 32) throw WRE(L"Unsupported bit depth");
 
+		auto maxValForSignedBits = [](Sample bits) -> Sample {
+			return ~(static_cast<Sample>(-1) << (bits - 1));
+		};
 		auto readSample = [&]() -> Sample {
 			uint32_t n = 0;
 			for (size_t i = 0; i < bitsPerSample; i += 8)
@@ -89,11 +92,12 @@ namespace Decode
 			{
 				for (size_t i = bitsPerSample; i < 32; i += 8)
 				{
-					n += (0xff << i);
+					n ^= (0xff << i);
 				}
 			}
 
-			return n;
+			const int32_t ni = std::bit_cast<int32_t>(n);
+			return ni * (maxValForSignedBits(32) / maxValForSignedBits(bitsPerSample));
 		};
 		auto readSample8bit = [&]() -> Sample { // Om bitdjupet är 8 bitar så blir det lite speciellt.
 			uint32_t n = cur.get();
@@ -101,13 +105,14 @@ namespace Decode
 			{
 				for (size_t i = 8; i < 32; i += 8)
 				{
-					n += (0xff << i);
+					n ^= (0xff << i);
 				}
 			}
 
 			n += 0x7fffffff;
 
-			return n;
+			const int32_t ni = std::bit_cast<int32_t>(n);
+			return ni * (maxValForSignedBits(32) / maxValForSignedBits(8));
 		};
 
 		// Skippar till "data"-headern.

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <filesystem>
 #include <cctype>
+#include <bit>
 #include "utils.h"
 #include "wav.h"
 
