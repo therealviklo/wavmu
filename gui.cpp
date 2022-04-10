@@ -87,7 +87,16 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 					{
 						const std::optional<std::string> file = fileSaveDialogue(L"wmu");
 						if (file)
-							saveSong(tracks, file->c_str());
+						{
+							try
+							{
+								saveSong(tracks, file->c_str());
+							}
+							catch (...)
+							{
+								lippincottNonFatal(L"Kunde inte spara projekt");
+							}
+						}
 					}
 					return 0;
 					case ID::openProject:
@@ -95,8 +104,15 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 						const std::optional<std::string> file = fileOpenDialogue(L"wmu");
 						if (file)
 						{
-							loadSong(tracks, file->c_str());
-							InvalidateRect(*this, nullptr, FALSE);
+							try
+							{
+								loadSong(tracks, file->c_str());
+								InvalidateRect(*this, nullptr, FALSE);
+							}
+							catch (...)
+							{
+								lippincottNonFatal(L"Kunde inte öppna projekt");
+							}
 						}
 					}
 					return 0;
@@ -104,7 +120,16 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 					{
 						const std::optional<std::string> file = fileSaveDialogue(L"wav");
 						if (file)
-							exportSong(tracks, 240, file->c_str());
+						{
+							try
+							{
+								exportSong(tracks, 240, file->c_str());
+							}
+							catch (...)
+							{
+								lippincottNonFatal(L"Kunde inte exportera låt");
+							}
+						}
 					}
 					return 0;
 				}

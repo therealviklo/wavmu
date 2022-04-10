@@ -19,7 +19,7 @@ inline void lippincott() noexcept
 			MessageBoxW(
 				nullptr,
 				e.wwhat(),
-				L"Error",
+				L"Fatalt fel",
 				MB_ICONERROR
 			);
 		}
@@ -27,13 +27,13 @@ inline void lippincott() noexcept
 		{
 			std::wostringstream ss;
 			ss << e.wwhat()
-			   << L" (Error code: 0x"
+			   << L" (Felkod: 0x"
 			   << std::hex << e.hr
 			   << L")";
 			MessageBoxW(
 				nullptr,
 				ss.str().c_str(),
-				L"Error",
+				L"Fatalt fel",
 				MB_ICONERROR
 			);
 		}
@@ -42,7 +42,7 @@ inline void lippincott() noexcept
 			MessageBoxW(
 				nullptr,
 				e.wwhat(),
-				L"Error",
+				L"Fatalt fel",
 				MB_ICONERROR
 			);
 		}
@@ -51,7 +51,7 @@ inline void lippincott() noexcept
 			MessageBoxW(
 				nullptr,
 				stringToWstring(e.what()).c_str(),
-				L"Error",
+				L"Fatalt fel",
 				MB_ICONERROR
 			);
 		}
@@ -59,8 +59,8 @@ inline void lippincott() noexcept
 		{
 			MessageBoxW(
 				nullptr,
-				L"Unknown error",
-				L"Error",
+				L"Okänt fel",
+				L"Fatalt fel",
 				MB_ICONERROR
 			);
 		}
@@ -69,9 +69,66 @@ inline void lippincott() noexcept
 	{
 		MessageBoxW(
 			nullptr,
-			L"Exception thrown when trying to display error message",
-			L"Error",
+			L"Fel uppstod när felmeddelande skulle visas",
+			L"Fatalt fel",
 			MB_ICONERROR
+		);
+	}
+}
+
+inline void lippincottNonFatal(const std::wstring& msg, UINT icon = MB_ICONERROR)
+{
+	try
+	{
+		throw;
+	}
+	catch (const WinError& e)
+	{
+		std::wostringstream ss;
+		ss << msg
+			<< L" (Fel: "
+			<< e.wwhat()
+			<< L", Felkod: 0x"
+			<< std::hex << e.hr
+			<< L")";
+		MessageBoxW(
+			nullptr,
+			ss.str().c_str(),
+			L"Fel",
+			icon
+		);
+	}
+	catch (const Wexception& e)
+	{
+		MessageBoxW(
+			nullptr,
+			(msg +
+			L" (Fel: "s +
+			e.wwhat() +
+			L")").c_str(),
+			L"Fel",
+			icon
+		);
+	}
+	catch (const std::exception& e)
+	{
+		MessageBoxW(
+			nullptr,
+			(msg +
+			L" (Fel: "s +
+			stringToWstring(e.what()) +
+			L")").c_str(),
+			L"Fel",
+			icon
+		);
+	}
+	catch (...)
+	{
+		MessageBoxW(
+			nullptr,
+			msg.c_str(),
+			L"Fel",
+			icon
 		);
 	}
 }

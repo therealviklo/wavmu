@@ -14,6 +14,7 @@
 #include "werror.h"
 
 using Microsoft::WRL::ComPtr;
+using namespace std::literals;
 
 inline std::string wstringToString(const std::wstring& s)
 {

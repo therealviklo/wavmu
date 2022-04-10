@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdlib>
+#include "lippincott.h"
 #include "sininstrument.h"
 #include "sampleinstrument.h"
 #include "fakeinstrument.h"

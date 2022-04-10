@@ -11,42 +11,12 @@ std::unique_ptr<Instrument> createInstrument(const char* name)
 	{
 		return std::make_unique<SampleInstrument>(name);
 	}
-	catch (const Wexception& e)
-	{
-		MessageBoxW(
-			nullptr,
-			(L"Varning: kunde inte öppna intrumentet \"" +
-			stringToWstring(name) +
-			L"\" (Fel: " +
-			e.wwhat() +
-			L")").c_str(),
-			L"Kunde inte öppna instrument",
-			MB_ICONWARNING
-		);
-		return std::make_unique<FakeInstrument>(name);
-	}
-	catch (const std::exception& e)
-	{
-		MessageBoxW(
-			nullptr,
-			(L"Varning: kunde inte öppna intrumentet \"" +
-			stringToWstring(name) +
-			L"\" (Fel: " +
-			stringToWstring(e.what()) +
-			L")").c_str(),
-			L"Kunde inte öppna instrument",
-			MB_ICONWARNING
-		);
-		return std::make_unique<FakeInstrument>(name);
-	}
 	catch (...)
 	{
-		MessageBoxW(
-			nullptr,
-			(L"Varning: kunde inte öppna intrumentet \"" +
+		lippincottNonFatal(
+			L"Varning: kunde inte öppna intrumentet \"" +
 			stringToWstring(name) +
-			L"\"").c_str(),
-			L"Kunde inte öppna instrument",
+			L"\"",
 			MB_ICONWARNING
 		);
 		return std::make_unique<FakeInstrument>(name);
