@@ -332,6 +332,23 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		{
 			if (selectedTrackPlus != -1)
 			{
+				size_t numTracks;
+				{
+					const std::lock_guard lg(mw.tracks.mtx);
+					numTracks = mw.tracks.data.size();
+				}
+				long long newSelectedTrackPlus = 0;
+				for (size_t i = 0; i < numTracks; i++)
+				{
+					const auto headPlace = channelHeadPlace(i);
+					if (GET_Y_LPARAM(lParam) >= headPlace.y)
+					{
+						newSelectedTrackPlus = i;
+					}
+					else break;
+				}
+				selectedTrackPlus = newSelectedTrackPlus;
+
 				const auto headPlace = channelHeadPlace(selectedTrackPlus);
 				addSectionPos = std::max<float>(GET_X_LPARAM(lParam) - (headPlace.x + headPlace.w), 0.0f);
 				InvalidateRect(mw, nullptr, FALSE);
