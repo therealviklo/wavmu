@@ -12,7 +12,17 @@ private:
 	long long selectedTrackPlus;
 	float addSectionPos;
 	float noteSize;
-	SectionRef* selectedSection;
+
+	std::vector<SectionRef*> selectedSections;
+	struct SecMark
+	{
+		bool marking;
+		D2D1_RECT_F reg;
+
+		SecMark() noexcept :
+			marking(false),
+			reg{} {}
+	} sm;
 public:
 	TrackView();
 

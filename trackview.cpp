@@ -39,6 +39,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			SolidBrush darkblue(D2D1::ColorF(0.0f, 0.0f, 0.2f), mw.rt);
 			SolidBrush darkishblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
 			SolidBrush blue(D2D1::ColorF(0.0f, 0.0f, 0.4f), mw.rt);
+			SolidBrush seldarkblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
+			SolidBrush selblue(D2D1::ColorF(0.0f, 0.0f, 0.5f, 0.5f), mw.rt);
 
 			const auto size = mw.getSize();
 
@@ -66,7 +68,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						const Placement sectPlace = sectionPlace(sect, i, noteSize);
 						mw.rt.drawRectangle(
 							sectPlace,
-							selectedSection == &sect ? darkishblue : blue
+							std::find(
+								selectedSections.begin(),
+								selectedSections.end(),
+								&sect
+							) != selectedSections.end() ? darkishblue : blue
 						);
 						constexpr float outlineW = 1.0f;
 						mw.rt.outlineRectangle(
@@ -157,6 +163,19 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				);
 			}
 
+			if (sm.marking)
+			{
+				mw.rt.drawRectangle(
+					sm.reg,
+					selblue
+				);
+				mw.rt.outlineRectangle(
+					sm.reg,
+					seldarkblue,
+					1.0f
+				);
+			}
+
 			if (mw.rt.endDraw(mw.d2dfac))
 				ValidateRect(mw, nullptr);
 		}
@@ -187,7 +206,6 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				return 0;
 			}
 			{
-				selectedSection = nullptr;
 				const std::lock_guard lg(mw.tracks.mtx);
 				for (size_t i = 0; i < mw.tracks.data.size(); i++)
 				{
@@ -210,36 +228,13 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					if (selectedTrackPlus == -1)
 					{
 						// Välj sektion
-						if (pressInPlace( // Kollar om man ens har tryckt på spåret
-							mx,
-							my,
-							Placement{
-								headPlace.x + headPlace.w,
-								headPlace.y,
-								size.right - headPlace.x - headPlace.w,
-								headPlace.h
-							}
-						))
-						{
-							// Går igenom spåren och kollar om man har tryckt på det
-							for (auto it = mw.tracks.data[i].sections.rbegin();
-								it != mw.tracks.data[i].sections.rend();
-								++it)
-							{
-								const Placement sectPlace = sectionPlace(*it, i, noteSize);
-								if (pressInPlace(
-									mx,
-									my,
-									sectPlace
-								))
-								{
-									selectedSection = &*it;
-									break;
-								}
-							}
-							InvalidateRect(mw, nullptr, FALSE);
-							return 0;
-						}
+						sm.marking = true;
+						sm.reg.left = mx;
+						sm.reg.top = my;
+						sm.reg.right = mx;
+						sm.reg.bottom = my;
+						InvalidateRect(mw, nullptr, FALSE);
+						return 0;
 					}
 					else
 					{
@@ -256,58 +251,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							))
 						{
 							mw.tracks.data[i].sections.emplace_back(SectionRef{
-								std::make_shared<Section>(Section{{
-									// {0.0, 1/8., 60 + 64},
-									// {1/8., 1/8., 60 + 64},
-									// {2/8., 2/8., 72 + 64},
-									// {4/8., 3/8., 67 + 64},
-									// {7/8., 2/8., 66 + 64},
-									
-									// {9/8., 2/8., 65 + 64},
-									// {11/8., 2/8., 63 + 64},
-									// {13/8., 1/8., 60 + 64},
-									// {14/8., 1/8., 63 + 64},
-									// {15/8., 1/8., 65 + 64},
-									
-
-									// {0.0 + 1 * 2.0, 1/8., 58 + 64},
-									// {1/8. + 1 * 2.0, 1/8., 58 + 64},
-									// {2/8. + 1 * 2.0, 2/8., 72 + 64},
-									// {4/8. + 1 * 2.0, 3/8., 67 + 64},
-									// {7/8. + 1 * 2.0, 2/8., 66 + 64},
-									
-									// {9/8. + 1 * 2.0, 2/8., 65 + 64},
-									// {11/8. + 1 * 2.0, 2/8., 63 + 64},
-									// {13/8. + 1 * 2.0, 1/8., 60 + 64},
-									// {14/8. + 1 * 2.0, 1/8., 63 + 64},
-									// {15/8. + 1 * 2.0, 1/8., 65 + 64},
-									
-
-									// {0.0 + 2 * 2.0, 1/8., 57 + 64},
-									// {1/8. + 2 * 2.0, 1/8., 57 + 64},
-									// {2/8. + 2 * 2.0, 2/8., 72 + 64},
-									// {4/8. + 2 * 2.0, 3/8., 67 + 64},
-									// {7/8. + 2 * 2.0, 2/8., 66 + 64},
-									
-									// {9/8. + 2 * 2.0, 2/8., 65 + 64},
-									// {11/8. + 2 * 2.0, 2/8., 63 + 64},
-									// {13/8. + 2 * 2.0, 1/8., 60 + 64},
-									// {14/8. + 2 * 2.0, 1/8., 63 + 64},
-									// {15/8. + 2 * 2.0, 1/8., 65 + 64},
-									
-
-									// {0.0 + 3 * 2.0, 1/8., 56 + 64},
-									// {1/8. + 3 * 2.0, 1/8., 56 + 64},
-									// {2/8. + 3 * 2.0, 2/8., 72 + 64},
-									// {4/8. + 3 * 2.0, 3/8., 67 + 64},
-									// {7/8. + 3 * 2.0, 2/8., 66 + 64},
-									
-									// {9/8. + 3 * 2.0, 2/8., 65 + 64},
-									// {11/8. + 3 * 2.0, 2/8., 63 + 64},
-									// {13/8. + 3 * 2.0, 1/8., 60 + 64},
-									// {14/8. + 3 * 2.0, 1/8., 63 + 64},
-									// {15/8. + 3 * 2.0, 1/8., 65 + 64},
-								}}),
+								std::make_shared<Section>(Section{{}}),
 								(mx - (headPlace.x + headPlace.w)) / noteSize
 							});
 							selectedTrackPlus = -1;
@@ -319,17 +263,68 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			}
 		}
 		break;
+		case WM_LBUTTONUP:
+		{
+			if (sm.marking)
+			{
+				const int mx = GET_X_LPARAM(lParam);
+				const int my = GET_Y_LPARAM(lParam);
+				sm.marking = false;
+				sm.reg.right = mx;
+				sm.reg.bottom = my;
+
+				if (sm.reg.right < sm.reg.left)
+				{
+					std::swap(sm.reg.right, sm.reg.left);
+				}
+				if (sm.reg.bottom < sm.reg.top)
+				{
+					std::swap(sm.reg.bottom, sm.reg.top);
+				}
+
+				selectedSections.clear();
+				{
+					const std::lock_guard lg(mw.tracks.mtx);
+					for (size_t i = 0; i < mw.tracks.data.size(); i++)
+					{
+						for (auto& secRef : mw.tracks.data[i].sections)
+						{
+							const auto secPlace = sectionPlace(secRef, i, noteSize);
+							if (rectsColliding(secPlace, sm.reg))
+							{
+								selectedSections.push_back(&secRef);
+							}
+						}
+					}
+				}
+				InvalidateRect(mw, nullptr, FALSE);
+				return 0;
+			}
+		}
+		break;
 		case WM_LBUTTONDBLCLK:
 		{
-			if (selectedSection)
+			const int mx = GET_X_LPARAM(lParam);
+			const int my = GET_Y_LPARAM(lParam);
+			const std::lock_guard lg(mw.tracks.mtx);
+			for (size_t i = 0; i < mw.tracks.data.size(); i++)
 			{
-				mw.vpush(std::make_unique<SectionView>(*selectedSection));
-				return 0;
+				for (auto& secRef : mw.tracks.data[i].sections)
+				{
+					const auto secPlace = sectionPlace(secRef, i, noteSize);
+					if (pressInPlace(mx, my, secPlace))
+					{
+						mw.vpush(std::make_unique<SectionView>(secRef));
+						return 0;
+					}
+				}
 			}
 		}
 		break;
 		case WM_MOUSEMOVE:
 		{
+			const int mx = GET_X_LPARAM(lParam);
+			const int my = GET_Y_LPARAM(lParam);
 			if (selectedTrackPlus != -1)
 			{
 				size_t numTracks;
@@ -341,7 +336,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				for (size_t i = 0; i < numTracks; i++)
 				{
 					const auto headPlace = channelHeadPlace(i);
-					if (GET_Y_LPARAM(lParam) >= headPlace.y)
+					if (my >= headPlace.y)
 					{
 						newSelectedTrackPlus = i;
 					}
@@ -350,7 +345,13 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				selectedTrackPlus = newSelectedTrackPlus;
 
 				const auto headPlace = channelHeadPlace(selectedTrackPlus);
-				addSectionPos = std::max<float>(GET_X_LPARAM(lParam) - (headPlace.x + headPlace.w), 0.0f);
+				addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
+				InvalidateRect(mw, nullptr, FALSE);
+			}
+			if (sm.marking)
+			{
+				sm.reg.right = mx;
+				sm.reg.bottom = my;
 				InvalidateRect(mw, nullptr, FALSE);
 			}
 		}
