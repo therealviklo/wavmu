@@ -8,5 +8,5 @@ public:
 
 	Sample at(double pos, uint16_t channel, Tone tone) const override;
 
-	std::string getName() const override;
+	const char* getName() const override;
 };

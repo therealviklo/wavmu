@@ -19,7 +19,7 @@ public:
 
 	constexpr double getReleaseTime() const noexcept {return envelope.release;}
 
-	virtual std::string getName() const = 0;
+	virtual const char* getName() const = 0;
 };
 
 extern const Instrument& defaultInstrument;

@@ -8,5 +8,5 @@ private:
 public:
 	FakeInstrument(std::string name);
 
-	std::string getName() const override;
+	const char* getName() const override;
 };

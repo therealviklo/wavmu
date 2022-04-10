@@ -40,6 +40,11 @@ void saveSong(Tracks& tracks, const char* filename)
 		write((std::uint64_t)tracks.data.size());
 		for (const Track& track : tracks.data)
 		{
+			for (const char* instname = track.instrument->getName(); *instname != '\0'; instname++)
+			{
+				write(*instname);
+			}
+			write((char)'\0');
 			write((std::uint64_t)track.sections.size());
 			for (const SectionRef& secref : track.sections)
 			{
@@ -85,11 +90,18 @@ void loadSong(Tracks& tracks, const char* filename)
 
 	std::vector<Track> newtracks;
 	const std::uint64_t numTracks = read(std::uint64_t());
+	newtracks.reserve(numTracks);
 	for (std::uint64_t i = 0; i < numTracks; i++)
 	{
 		newtracks.emplace_back();
-		newtracks.rbegin()->instrument = std::make_unique<SinInstrument>();
+
+		std::string instname;
+		while (char c = read(char()))
+			instname += c;
+		newtracks.rbegin()->instrument = createInstrument(instname.c_str());
+
 		const std::uint64_t numTrackSecs = read(std::uint64_t());
+		newtracks.rbegin()->sections.reserve(numTrackSecs);
 		for (std::uint64_t j = 0; j < numTrackSecs; j++)
 		{
 			newtracks.rbegin()->sections.emplace_back();

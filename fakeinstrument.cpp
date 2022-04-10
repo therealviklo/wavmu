@@ -3,7 +3,7 @@
 FakeInstrument::FakeInstrument(std::string name) :
 	name(name) {}
 
-std::string FakeInstrument::getName() const
+const char* FakeInstrument::getName() const
 {
-	return name;
+	return name.c_str();
 }
