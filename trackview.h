@@ -13,7 +13,7 @@ private:
 	float addSectionPos;
 	float noteSize;
 
-	std::vector<SectionRef*> selectedSections;
+	std::map<size_t, std::vector<size_t>> selectedSections;
 	struct SecMark
 	{
 		bool marking;

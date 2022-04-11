@@ -63,16 +63,26 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					);
 
 					// Rita sektioner
-					for (const auto& sect : mw.tracks.data[i].sections)
+					for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
 					{
-						const Placement sectPlace = sectionPlace(sect, i, noteSize);
+						auto sectIsSelected = [&]() -> bool {
+							if (selectedSections.contains(i))
+							{
+								for (const auto& k : selectedSections.at(i))
+								{
+									if (k == j)
+									{
+										return true;
+									}
+								}
+							}
+							return false;
+						};
+
+						const Placement sectPlace = sectionPlace(mw.tracks.data[i].sections[j], i, noteSize);
 						mw.rt.drawRectangle(
 							sectPlace,
-							std::find(
-								selectedSections.begin(),
-								selectedSections.end(),
-								&sect
-							) != selectedSections.end() ? darkishblue : blue
+							sectIsSelected() ? darkishblue : blue
 						);
 						constexpr float outlineW = 1.0f;
 						mw.rt.outlineRectangle(
@@ -287,14 +297,21 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					const std::lock_guard lg(mw.tracks.mtx);
 					for (size_t i = 0; i < mw.tracks.data.size(); i++)
 					{
-						for (auto& secRef : mw.tracks.data[i].sections)
+						std::vector<size_t> selSectsForTrack;
+						for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
 						{
-							const auto secPlace = sectionPlace(secRef, i, noteSize);
+							const auto secPlace =
+								sectionPlace(
+									mw.tracks.data[i].sections[j],
+									i,
+									noteSize
+								);
 							if (rectsColliding(secPlace, sm.reg))
 							{
-								selectedSections.push_back(&secRef);
+								selSectsForTrack.push_back(j);
 							}
 						}
+						selectedSections.emplace(i, std::move(selSectsForTrack));
 					}
 				}
 				InvalidateRect(mw, nullptr, FALSE);
@@ -374,6 +391,28 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					{
 						mw.player.start(mw.tracks, 240);
 					}
+				}
+				return 0;
+				case VK_DELETE:
+				{
+					const std::lock_guard lg(mw.tracks.mtx);
+					if (mw.tracks.playing.test(std::memory_order_relaxed))
+						return 0;
+					for (auto& i : selectedSections)
+					{
+						std::sort(
+							i.second.begin(),
+							i.second.end(),
+							std::greater<size_t>()
+						);
+						for (const auto& j : i.second)
+						{
+							mw.tracks.data[i.first].sections.erase(
+								mw.tracks.data[i.first].sections.begin() + j
+							);
+						}
+					}
+					InvalidateRect(mw, nullptr, FALSE);
 				}
 				return 0;
 			}
