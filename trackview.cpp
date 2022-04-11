@@ -235,18 +235,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
-					if (selectedTrackPlus == -1)
-					{
-						// Välj sektion
-						sm.marking = true;
-						sm.reg.left = mx;
-						sm.reg.top = my;
-						sm.reg.right = mx;
-						sm.reg.bottom = my;
-						InvalidateRect(mw, nullptr, FALSE);
-						return 0;
-					}
-					else
+					if (selectedTrackPlus != -1)
 					{
 						// Kollar om man ska lägga till en sektion
 						if (i == (size_t)selectedTrackPlus && pressInPlace(
@@ -269,6 +258,17 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							return 0;
 						}
 					}
+				}
+				if (selectedTrackPlus == -1)
+				{
+					// Välj sektion
+					sm.marking = true;
+					sm.reg.left = mx;
+					sm.reg.top = my;
+					sm.reg.right = mx;
+					sm.reg.bottom = my;
+					InvalidateRect(mw, nullptr, FALSE);
+					return 0;
 				}
 			}
 		}
