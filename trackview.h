@@ -23,6 +23,8 @@ private:
 			marking(false),
 			reg{} {}
 	} sm;
+
+	std::optional<D2D1_POINT_2F> secMove;
 public:
 	TrackView();
 

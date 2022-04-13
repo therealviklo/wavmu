@@ -28,6 +28,20 @@ TrackView::TrackView() :
 
 LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	auto sectIsSelected = [&](size_t track, size_t sect) -> bool {
+		if (selectedSections.contains(track))
+		{
+			for (const auto& k : selectedSections.at(track))
+			{
+				if (k == sect)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	};
+
 	switch (msg)
 	{
 		case WM_PAINT:
@@ -65,24 +79,10 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					// Rita sektioner
 					for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
 					{
-						auto sectIsSelected = [&]() -> bool {
-							if (selectedSections.contains(i))
-							{
-								for (const auto& k : selectedSections.at(i))
-								{
-									if (k == j)
-									{
-										return true;
-									}
-								}
-							}
-							return false;
-						};
-
 						const Placement sectPlace = sectionPlace(mw.tracks.data[i].sections[j], i, noteSize);
 						mw.rt.drawRectangle(
 							sectPlace,
-							sectIsSelected() ? darkishblue : blue
+							sectIsSelected(i, j) ? darkishblue : blue
 						);
 						constexpr float outlineW = 1.0f;
 						mw.rt.outlineRectangle(
@@ -235,7 +235,30 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
-					if (selectedTrackPlus != -1)
+					if (selectedTrackPlus == -1)
+					{
+						for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
+						{
+							const auto sectPlace =
+								sectionPlace(
+									mw.tracks.data[i].sections[j],
+									i,
+									noteSize
+								);
+							if (pressInPlace(mx, my, sectPlace) && sectIsSelected(i, j))
+							{
+								secMove.emplace(
+									D2D1_POINT_2F{
+										static_cast<float>(mx),
+										static_cast<float>(my)
+									}
+								);
+								InvalidateRect(mw, nullptr, FALSE);
+								return 0;
+							}
+						}
+					}
+					else
 					{
 						// Kollar om man ska lägga till en sektion
 						if (i == (size_t)selectedTrackPlus && pressInPlace(
@@ -275,10 +298,10 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		break;
 		case WM_LBUTTONUP:
 		{
+			const int mx = GET_X_LPARAM(lParam);
+			const int my = GET_Y_LPARAM(lParam);
 			if (sm.marking)
 			{
-				const int mx = GET_X_LPARAM(lParam);
-				const int my = GET_Y_LPARAM(lParam);
 				sm.marking = false;
 				sm.reg.right = mx;
 				sm.reg.bottom = my;
@@ -314,6 +337,25 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						selectedSections.emplace(i, std::move(selSectsForTrack));
 					}
 				}
+				InvalidateRect(mw, nullptr, FALSE);
+				return 0;
+			}
+			if (secMove)
+			{
+				const std::lock_guard lg(mw.tracks.mtx);
+				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				{
+					for (const auto& i : selectedSections)
+					{
+						for (const auto& j : i.second)
+						{
+							auto& ts = mw.tracks.data[i.first].sections[j].timestamp;
+							ts = std::max<double>(0.0, ts + (mx - secMove->x) / noteSize);
+						}
+					}
+				}
+
+				secMove.reset();
 				InvalidateRect(mw, nullptr, FALSE);
 				return 0;
 			}
