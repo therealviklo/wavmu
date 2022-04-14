@@ -78,7 +78,7 @@ float TrackView::getLeastSnapDiff(float x, const std::vector<Track>& tracks)
 
 float TrackView::getSnapDiffFromSelection(const std::vector<Track>& tracks)
 {
-	float leastSnap = INFINITY;
+	float leastSnap = secMove->left - secMove->right;
 	for (const auto& i : selectedSections)
 	{
 		for (size_t j = 0; j < i.second.size(); j++)
