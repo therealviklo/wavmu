@@ -27,9 +27,9 @@ Tone SectionView::NoteSelect::getTone(float y, Offset scroll)
 	return 256 - (y - scroll.y) / noteH;
 }
 
-double SectionView::NoteSelect::getTime(float x, Offset scroll, TimeSignature timesig)
+double SectionView::NoteSelect::getTime(float x, Offset scroll, TimeSignature timesig, int zoom)
 {
-	const float qnoteW = noteW / timesig.btm;
+	const float qnoteW = noteW / (timesig.btm * std::exp2f(zoom));
 	return std::roundf((x - scroll.x) / qnoteW) * qnoteW / noteW;
 }
 
@@ -63,7 +63,8 @@ void SectionView::captureScroll(RECT size)
 
 SectionView::SectionView(SectionRef& sect) noexcept :
 	sect(sect),
-	scroll{0.0f, -(255 - 124) * noteH} {}
+	scroll{0.0f, -(255 - 124) * noteH},
+	raster(0) {}
 
 void SectionView::onResize(WORD width, WORD height)
 {
@@ -91,13 +92,29 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			
 			const auto size = mw.getSize();
 
-			for (int i = -scroll.x / noteW * sect.section->timesig.btm; i * noteW / sect.section->timesig.btm + scroll.x < size.right; ++i)
+			const float lineInterval = noteW / (sect.section->timesig.btm * std::exp2f(raster));
+			for (int i = -scroll.x / lineInterval; i * lineInterval + scroll.x < size.right; ++i)
 			{
+				auto iTimesExp2 = [](int i, int e) -> int {
+					if (e < 0)
+					{
+						return i >> -e;
+					}
+					else
+					{
+						return i << e;
+					}
+				};
+				auto safeMod = [](int a, int b) -> int {
+					if (!b) return 0;
+					return a % b;
+				};
+				const bool measureLine = safeMod(i, iTimesExp2(sect.section->timesig.top, raster)) == 0;
 				mw.rt.drawLine(
-					D2D1::Point2F(i * noteW / sect.section->timesig.btm, 0.0f) + scroll.onlyX(),
-					D2D1::Point2F(i * noteW / sect.section->timesig.btm, size.bottom) + scroll.onlyX(),
-					i % sect.section->timesig.top == 0 ? subtlessgrey : subtlegrey,
-					i % sect.section->timesig.top == 0 ? 3.0f : 1.0f
+					D2D1::Point2F(i * lineInterval, 0.0f) + scroll.onlyX(),
+					D2D1::Point2F(i * lineInterval, size.bottom) + scroll.onlyX(),
+					measureLine ? subtlessgrey : subtlegrey,
+					measureLine ? 3.0f : 1.0f
 				);
 			}
 			for (int i = -scroll.y / noteH; i * noteH + scroll.y < size.bottom; ++i)
@@ -246,6 +263,21 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					InvalidateRect(mw, nullptr, FALSE);
 				}
 				return 0;
+				case VK_OEM_PLUS:
+				{
+					raster += 1;
+					InvalidateRect(mw, nullptr, FALSE);
+				}
+				return 0;
+				case VK_OEM_MINUS:
+				{
+					if (raster > -std::log2(sect.section->timesig.btm))
+					{
+						raster -= 1;
+						InvalidateRect(mw, nullptr, FALSE);
+					}
+				}
+				return 0;
 			}
 		}
 		break;
@@ -255,8 +287,8 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			const int x = GET_X_LPARAM(lParam); 
 			const int y = GET_Y_LPARAM(lParam); 
 			ns.tone = ns.getTone(y, scroll);
-			ns.start = ns.getTime(x, scroll, sect.section->timesig);
-			ns.end = ns.getTime(x, scroll, sect.section->timesig);
+			ns.start = ns.getTime(x, scroll, sect.section->timesig, raster);
+			ns.end = ns.start;
 			ns.selecting = true;
 			InvalidateRect(mw, nullptr, FALSE);
 		}
@@ -336,7 +368,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			{
 				const std::lock_guard lg(mw.tracks.mtx);
 				const int x = GET_X_LPARAM(lParam);
-				ns.end = ns.getTime(x, scroll, sect.section->timesig);
+				ns.end = ns.getTime(x, scroll, sect.section->timesig, raster);
 				InvalidateRect(mw, nullptr, FALSE);
 				return 0;
 			}

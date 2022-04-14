@@ -7,6 +7,7 @@ class SectionView : public View
 private:
 	SectionRef& sect;
 	Offset scroll;
+	int raster;
 	/* Av någon anledning så kallade jag det här för "NoteSelect"
 	   fastän det används när man ska skapa noter, inte välja dem ... */
 	struct NoteSelect
@@ -19,7 +20,7 @@ private:
 		NoteSelect() noexcept;
 
 		static Tone getTone(float y, Offset scroll);
-		static double getTime(float x, Offset scroll, TimeSignature timesig);
+		static double getTime(float x, Offset scroll, TimeSignature timesig, int zoom);
 	} ns;
 	// ... så det här får heta "markedNotes".
 	std::vector<size_t> markedNotes;
