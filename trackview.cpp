@@ -13,12 +13,22 @@ namespace
 		return {head.x + head.w - 30.0f, head.y, 30.0f, 30.0f};
 	}
 
-	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize)
+	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize, float secMoveX)
 	{
 		const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
 		const Placement place = channelHeadPlace(n);
-		return Placement{place.x + place.w + noteSize * (float)sect.timestamp, place.y, sectLen * noteSize, place.h};
+		return Placement{
+			place.x + place.w + std::max<float>(noteSize * (float)sect.timestamp + secMoveX, 0.0),
+			place.y,
+			sectLen * noteSize,
+			place.h
+		};
 	}
+}
+
+float TrackView::getSecMoveDiffX() const
+{
+	return secMove ? secMove->right - secMove->left : 0.0f;
 }
 
 TrackView::TrackView() :
@@ -79,10 +89,16 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					// Rita sektioner
 					for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
 					{
-						const Placement sectPlace = sectionPlace(mw.tracks.data[i].sections[j], i, noteSize);
+						const bool isSelected = sectIsSelected(i, j);
+						const Placement sectPlace = sectionPlace(
+							mw.tracks.data[i].sections[j],
+							i,
+							noteSize,
+							isSelected ? getSecMoveDiffX() : 0.0f
+						);
 						mw.rt.drawRectangle(
 							sectPlace,
-							sectIsSelected(i, j) ? darkishblue : blue
+							isSelected ? darkishblue : blue
 						);
 						constexpr float outlineW = 1.0f;
 						mw.rt.outlineRectangle(
@@ -243,12 +259,15 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 								sectionPlace(
 									mw.tracks.data[i].sections[j],
 									i,
-									noteSize
+									noteSize,
+									0.0f
 								);
 							if (pressInPlace(mx, my, sectPlace) && sectIsSelected(i, j))
 							{
 								secMove.emplace(
-									D2D1_POINT_2F{
+									D2D1_RECT_F{
+										static_cast<float>(mx),
+										static_cast<float>(my),
 										static_cast<float>(mx),
 										static_cast<float>(my)
 									}
@@ -327,7 +346,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 								sectionPlace(
 									mw.tracks.data[i].sections[j],
 									i,
-									noteSize
+									noteSize,
+									0.0f
 								);
 							if (rectsColliding(secPlace, sm.reg))
 							{
@@ -342,6 +362,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			}
 			if (secMove)
 			{
+				secMove->right = mx;
+				secMove->bottom = my;
 				const std::lock_guard lg(mw.tracks.mtx);
 				if (!mw.tracks.playing.test(std::memory_order_relaxed))
 				{
@@ -350,7 +372,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						for (const auto& j : i.second)
 						{
 							auto& ts = mw.tracks.data[i.first].sections[j].timestamp;
-							ts = std::max<double>(0.0, ts + (mx - secMove->x) / noteSize);
+							ts = std::max<double>(0.0, ts + (mx - secMove->left) / noteSize);
 						}
 					}
 				}
@@ -370,7 +392,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				for (auto& secRef : mw.tracks.data[i].sections)
 				{
-					const auto secPlace = sectionPlace(secRef, i, noteSize);
+					const auto secPlace = sectionPlace(secRef, i, noteSize, 0.0f);
 					if (pressInPlace(mx, my, secPlace))
 					{
 						mw.vpush(std::make_unique<SectionView>(secRef));
@@ -411,6 +433,12 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				sm.reg.right = mx;
 				sm.reg.bottom = my;
+				InvalidateRect(mw, nullptr, FALSE);
+			}
+			if (secMove)
+			{
+				secMove->right = mx;
+				secMove->bottom = my;
 				InvalidateRect(mw, nullptr, FALSE);
 			}
 		}

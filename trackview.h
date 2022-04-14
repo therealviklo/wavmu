@@ -24,7 +24,8 @@ private:
 			reg{} {}
 	} sm;
 
-	std::optional<D2D1_POINT_2F> secMove;
+	std::optional<D2D1_RECT_F> secMove;
+	float getSecMoveDiffX() const;
 public:
 	TrackView();
 
