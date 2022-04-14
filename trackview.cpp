@@ -26,32 +26,102 @@ namespace
 	}
 }
 
+float TrackView::sectIsSelected(size_t track, size_t sect)
+{
+	if (selectedSections.contains(track))
+	{
+		for (const auto& k : selectedSections.at(track))
+		{
+			if (k == sect)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+float TrackView::getLeastSnapDiff(float x, const std::vector<Track>& tracks)
+{
+	const Placement chp = channelHeadPlace(0);
+	float leastSnap = chp.x + chp.w - x;
+	for (size_t i = 0; i < tracks.size(); i++)
+	{
+		for (size_t j = 0; j < tracks[i].sections.size(); j++)
+		{
+			if (sectIsSelected(i, j)) continue;
+			const auto& sect = tracks[i].sections[j];
+
+			const Placement sectPlace = sectionPlace(sect, i, noteSize, 0.0f);
+			const float startSnap = sectPlace.x - x;
+			const float ssabs = std::fabsf(startSnap);
+			const float endSnap = sectPlace.x + sectPlace.w - x;
+			const float esabs = std::fabsf(endSnap);
+			if (esabs < ssabs)
+			{
+				if (esabs < std::fabsf(leastSnap))
+				{
+					leastSnap = endSnap;
+				}
+			}
+			else
+			{
+				if (ssabs < std::fabsf(leastSnap))
+				{
+					leastSnap = startSnap;
+				}
+			}
+		}
+	}
+	return leastSnap;
+}
+
+float TrackView::getSnapDiffFromSelection(const std::vector<Track>& tracks)
+{
+	float leastSnap = INFINITY;
+	for (const auto& i : selectedSections)
+	{
+		for (size_t j = 0; j < i.second.size(); j++)
+		{
+			const auto& sect = tracks[i.first].sections[i.second[j]];
+			const Placement sectPlace = sectionPlace(sect, i.first, noteSize, secMove->right - secMove->left);
+
+			const float startSnap = getLeastSnapDiff(sectPlace.x, tracks);
+			const float ssabs = std::fabsf(startSnap);
+			const float endSnap = getLeastSnapDiff(sectPlace.x + sectPlace.w, tracks);
+			const float esabs = std::fabsf(endSnap);
+			if (esabs < ssabs)
+			{
+				if (esabs < std::fabsf(leastSnap))
+				{
+					leastSnap = endSnap;
+				}
+			}
+			else
+			{
+				if (ssabs < std::fabsf(leastSnap))
+				{
+					leastSnap = startSnap;
+				}
+			}
+		}
+	}
+	return std::fabsf(leastSnap) < 10.0f ? leastSnap : 0.0f;
+}
+
 float TrackView::getSecMoveDiffX() const
 {
-	return secMove ? secMove->right - secMove->left : 0.0f;
+	return secMove ? secMove->right - secMove->left + snap : 0.0f;
 }
 
 TrackView::TrackView() :
 	selectedTrackPlus(-1),
 	addSectionPos(0.0f),
-	noteSize(50.0f) {}
+	noteSize(50.0f),
+	snap(0.0f) {}
 
 LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	auto sectIsSelected = [&](size_t track, size_t sect) -> bool {
-		if (selectedSections.contains(track))
-		{
-			for (const auto& k : selectedSections.at(track))
-			{
-				if (k == sect)
-				{
-					return true;
-				}
-			}
-		}
-		return false;
-	};
-
 	switch (msg)
 	{
 		case WM_PAINT:
@@ -264,6 +334,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 								);
 							if (pressInPlace(mx, my, sectPlace) && sectIsSelected(i, j))
 							{
+								// Flytta markering
 								secMove.emplace(
 									D2D1_RECT_F{
 										static_cast<float>(mx),
@@ -272,6 +343,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 										static_cast<float>(my)
 									}
 								);
+								snap = 0.0f;
 								InvalidateRect(mw, nullptr, FALSE);
 								return 0;
 							}
@@ -365,6 +437,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				secMove->right = mx;
 				secMove->bottom = my;
 				const std::lock_guard lg(mw.tracks.mtx);
+				const float diffX = getSecMoveDiffX();
 				if (!mw.tracks.playing.test(std::memory_order_relaxed))
 				{
 					for (const auto& i : selectedSections)
@@ -372,7 +445,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						for (const auto& j : i.second)
 						{
 							auto& ts = mw.tracks.data[i.first].sections[j].timestamp;
-							ts = std::max<double>(0.0, ts + (mx - secMove->left) / noteSize);
+							ts = std::max<double>(0.0, ts + diffX / noteSize);
 						}
 					}
 				}
@@ -439,6 +512,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				secMove->right = mx;
 				secMove->bottom = my;
+				snap = getSnapDiffFromSelection(mw.tracks.data);
 				InvalidateRect(mw, nullptr, FALSE);
 			}
 		}

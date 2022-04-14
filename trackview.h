@@ -25,6 +25,11 @@ private:
 	} sm;
 
 	std::optional<D2D1_RECT_F> secMove;
+	float snap;
+
+	float sectIsSelected(size_t track, size_t sect);
+	float getLeastSnapDiff(float x, const std::vector<Track>& tracks);
+	float getSnapDiffFromSelection(const std::vector<Track>& tracks);
 	float getSecMoveDiffX() const;
 public:
 	TrackView();
