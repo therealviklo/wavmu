@@ -358,6 +358,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							selectedTrackPlus = i;
 						}
 						addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
+						selectedSections.clear();
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
@@ -527,6 +528,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					const auto secPlace = sectionPlace(secRef, i, noteSize, 0.0f, scroll);
 					if (pressInPlace(mx, my, secPlace))
 					{
+						selectedSections.clear();
 						mw.vpush(std::make_unique<SectionView>(secRef));
 						return 0;
 					}
