@@ -41,9 +41,9 @@ MainWindow::MainWindow() :
 				L"Arkiv",
 				Menu({
 					MenuItem::String{L"Spara projekt\tCtrl+S", ID::saveProject},
-					MenuItem::String{L"Spara projekt som...", ID::saveProjectAs},
-					MenuItem::String{L"Öppna projekt...", ID::openProject},
-					MenuItem::String{L"Exportera som...", ID::exportSong}
+					MenuItem::String{L"Spara projekt som...\tCtrl+Shift+S", ID::saveProjectAs},
+					MenuItem::String{L"Öppna projekt...\tCtrl+O", ID::openProject},
+					MenuItem::String{L"Exportera som...\tCtrl+E", ID::exportSong}
 				})
 			}}),
 		nullptr,
@@ -150,6 +150,32 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 								lippincottNonFatal(L"Kunde inte exportera låt");
 							}
 						}
+					}
+					return 0;
+				}
+			}
+			else if (HIWORD(wParam) == 1)
+			{
+				switch (LOWORD(wParam))
+				{
+					case ACC_SAVE:
+					{
+						SendMessageW(*this, WM_COMMAND, ID::saveProject, 0);
+					}
+					return 0;
+					case ACC_SAVEAS:
+					{
+						SendMessageW(*this, WM_COMMAND, ID::saveProjectAs, 0);
+					}
+					return 0;
+					case ACC_OPEN:
+					{
+						SendMessageW(*this, WM_COMMAND, ID::openProject, 0);
+					}
+					return 0;
+					case ACC_EXPORT:
+					{
+						SendMessageW(*this, WM_COMMAND, ID::exportSong, 0);
 					}
 					return 0;
 				}

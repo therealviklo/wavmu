@@ -133,18 +133,26 @@ public:
 	ComHandler& operator=(const ComHandler&) = delete;
 };
 
-int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, PWSTR /*pCmdLine*/, int /*nCmdShow*/)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, PWSTR /*pCmdLine*/, int /*nCmdShow*/)
 {
 	try
 	{
 		ComHandler ch;
 		
 		MainWindow mw;
+		const HACCEL hAccel = LoadAcceleratorsW(hInstance, MAKEINTRESOURCEW(RSC_ACC));
 		mw.vpush(std::make_unique<TrackView>());
 		ShowWindow(mw, SW_SHOWDEFAULT);
 		while (mw)
 		{
-			updateAllWindows();
+			MSG msg;
+			if (GetMessageW(&msg, nullptr, 0, 0) == -1)
+				throw WinError(L"Failed to get message");
+			if (!TranslateAcceleratorW(mw, hAccel, &msg))
+			{
+				TranslateMessage(&msg);
+				DispatchMessageW(&msg);
+			}
 		}
 	}
 	catch (...)
