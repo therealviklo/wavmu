@@ -109,12 +109,12 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					if (!b) return 0;
 					return a % b;
 				};
-				const bool measureLine = safeMod(i, iTimesExp2(sect.section->timesig.top, raster)) == 0;
+				const bool barLine = safeMod(i, iTimesExp2(sect.section->timesig.top, raster)) == 0;
 				mw.rt.drawLine(
 					D2D1::Point2F(i * lineInterval, 0.0f) + scroll.onlyX(),
 					D2D1::Point2F(i * lineInterval, size.bottom) + scroll.onlyX(),
-					measureLine ? subtlessgrey : subtlegrey,
-					measureLine ? 3.0f : 1.0f
+					barLine ? subtlessgrey : subtlegrey,
+					barLine ? 3.0f : 1.0f
 				);
 			}
 			for (int i = -scroll.y / noteH; i * noteH + scroll.y < size.bottom; ++i)
@@ -271,7 +271,16 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 				return 0;
 				case VK_OEM_MINUS:
 				{
-					if (raster > -std::log2(sect.section->timesig.btm))
+					auto log2i = [](unsigned x) -> int {
+						int r = -1;
+						while (x)
+						{
+							r++;
+							x >>= 1;
+						}
+						return r;
+					};
+					if (raster > -log2i(sect.section->timesig.btm))
 					{
 						raster -= 1;
 						InvalidateRect(mw, nullptr, FALSE);
