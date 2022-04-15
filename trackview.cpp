@@ -466,6 +466,30 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				}
 
 				selectedSections.clear();
+				if (sm.reg.right == sm.reg.left && sm.reg.bottom == sm.reg.top)
+				{
+					const std::lock_guard lg(mw.tracks.mtx);
+					for (size_t i = 0; i < mw.tracks.data.size(); i++)
+					{
+						for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
+						{
+							const auto secPlace =
+								sectionPlace(
+									mw.tracks.data[i].sections[j],
+									i,
+									noteSize,
+									0.0f,
+									scroll
+								);
+							if (rectsColliding(secPlace, sm.reg))
+							{
+								selectedSections.clear();
+								selectedSections.emplace(i, std::vector<size_t>{j});
+							}
+						}
+					}
+				}
+				else
 				{
 					const std::lock_guard lg(mw.tracks.mtx);
 					for (size_t i = 0; i < mw.tracks.data.size(); i++)
