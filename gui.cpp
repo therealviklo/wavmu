@@ -38,12 +38,12 @@ MainWindow::MainWindow() :
 		L"Wavmu",
 		Menu({
 			MenuItem::SubMenu{
-				L"Arkiv",
+				L"&Arkiv",
 				Menu({
-					MenuItem::String{L"Spara projekt\tCtrl+S", ID::saveProject},
-					MenuItem::String{L"Spara projekt som...\tCtrl+Shift+S", ID::saveProjectAs},
-					MenuItem::String{L"Öppna projekt...\tCtrl+O", ID::openProject},
-					MenuItem::String{L"Exportera som...\tCtrl+E", ID::exportSong}
+					MenuItem::String{L"&Spara projekt\tCtrl+S", ID::saveProject},
+					MenuItem::String{L"Spara &projekt som...\tCtrl+Shift+S", ID::saveProjectAs},
+					MenuItem::String{L"Öppna pr&ojekt...\tCtrl+O", ID::openProject},
+					MenuItem::String{L"&Exportera som...\tCtrl+E", ID::exportSong}
 				})
 			}}),
 		nullptr,
