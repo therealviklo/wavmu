@@ -10,3 +10,5 @@
 #define ACC_SAVEAS 40003
 #define ACC_OPEN 40004
 #define ACC_EXPORT 40005
+#define ACC_COPY 40006
+#define ACC_PASTE 40007

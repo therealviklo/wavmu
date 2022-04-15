@@ -667,6 +667,54 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			InvalidateRect(mw, nullptr, FALSE);
 		}
 		return 0;
+		case WM_COMMAND:
+		{
+			if (HIWORD(wParam) == 1)
+			{
+				switch (LOWORD(wParam))
+				{
+					case ACC_COPY:
+					{
+						bool sectAdded = false;
+						std::map<size_t, std::vector<SectionRef>> newClipboard;
+						const std::lock_guard lg(mw.tracks.mtx);
+						for (const auto& i : selectedSections)
+						{
+							std::vector<SectionRef> sects;
+							for (const auto& j : i.second)
+							{
+								sects.push_back(mw.tracks.data[i.first].sections[j]);
+							}
+							sectAdded = sectAdded || !sects.empty();
+							newClipboard.emplace(i.first, std::move(sects));
+						}
+						if (sectAdded)
+							clipboard = newClipboard;
+					}
+					return 0;
+					case ACC_PASTE:
+					{
+						const std::lock_guard lg(mw.tracks.mtx);
+						if (mw.tracks.playing.test(std::memory_order_relaxed))
+							return 0;
+						selectedSections.clear();
+						for (const auto& i : clipboard)
+						{
+							std::vector<size_t> indices;
+							for (const auto& j : i.second)
+							{
+								indices.push_back(mw.tracks.data[i.first].sections.size());
+								mw.tracks.data[i.first].sections.push_back(j);
+							}
+							selectedSections.emplace(i.first, std::move(indices));
+						}
+						InvalidateRect(mw, nullptr, FALSE);
+					}
+					return 0;
+				}
+			}
+		}
+		break;
 	}
 	return DefWindowProcW(mw, msg, wParam, lParam);
 }
