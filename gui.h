@@ -33,6 +33,8 @@ class MainWindow : public Window
 {
 private:
 	std::stack<std::unique_ptr<View>> views;
+
+	std::string prevSaveName;
 public:
 	Tracks tracks;
 	Player player;

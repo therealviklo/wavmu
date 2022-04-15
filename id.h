@@ -6,6 +6,7 @@ namespace ID
 	enum : UINT_PTR
 	{
 		saveProject = 201,
+		saveProjectAs,
 		openProject,
 		exportSong,
 		instrNameLbl,

@@ -40,7 +40,8 @@ MainWindow::MainWindow() :
 			MenuItem::SubMenu{
 				L"Arkiv",
 				Menu({
-					MenuItem::String{L"Spara projekt som...", ID::saveProject},
+					MenuItem::String{L"Spara projekt\tCtrl+S", ID::saveProject},
+					MenuItem::String{L"Spara projekt som...", ID::saveProjectAs},
 					MenuItem::String{L"Öppna projekt...", ID::openProject},
 					MenuItem::String{L"Exportera som...", ID::exportSong}
 				})
@@ -85,11 +86,30 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					case ID::saveProject:
 					{
+						const std::optional<std::string> file =
+							prevSaveName.empty() ? fileSaveDialogue(L"wmu") : prevSaveName;
+						if (file)
+						{
+							try
+							{
+								prevSaveName = *file;
+								saveSong(tracks, file->c_str());
+							}
+							catch (...)
+							{
+								lippincottNonFatal(L"Kunde inte spara projekt");
+							}
+						}
+					}
+					return 0;
+					case ID::saveProjectAs:
+					{
 						const std::optional<std::string> file = fileSaveDialogue(L"wmu");
 						if (file)
 						{
 							try
 							{
+								prevSaveName = *file;
 								saveSong(tracks, file->c_str());
 							}
 							catch (...)
