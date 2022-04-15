@@ -13,6 +13,12 @@ namespace
 		return {head.x + head.w - 30.0f, head.y, 30.0f, 30.0f};
 	}
 
+	inline Placement deleteTrackPlace(size_t n, Offset scroll)
+	{
+		const auto head = channelHeadPlace(n, scroll);
+		return {head.x, head.y + head.h - 30.0f, 30.0f, 30.0f};
+	}
+
 	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize, float secMoveX, Offset scroll)
 	{
 		const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
@@ -241,6 +247,31 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						),
 						darkgrey
 					);
+
+					// Rita soptunnan
+					const auto delTrackPlace = deleteTrackPlace(i, scroll);
+					mw.rt.drawRectangle(
+						delTrackPlace,
+						lightishgrey
+					);
+					mw.rt.drawRectangle(
+						D2D1::RectF(
+							delTrackPlace.x + delTrackPlace.w / 2.0f - 6.0f,
+							delTrackPlace.y + 5.0f,
+							delTrackPlace.x + delTrackPlace.w / 2.0f + 6.0f,
+							delTrackPlace.y + delTrackPlace.h - 5.0f
+						),
+						darkgrey
+					);
+					mw.rt.drawRectangle(
+						D2D1::RectF(
+							delTrackPlace.x + 6.0f,
+							delTrackPlace.y + delTrackPlace.h / 2.0f - 7.0f,
+							delTrackPlace.x + delTrackPlace.w - 6.0f,
+							delTrackPlace.y + delTrackPlace.h / 2.0f - 3.0f
+						),
+						darkgrey
+					);
 				}
 				// Rita lägg-till-track-knappen
 				const auto place = channelHeadPlace(i, scroll);
@@ -328,6 +359,23 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						}
 						addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
 						InvalidateRect(mw, nullptr, FALSE);
+						return 0;
+					}
+					if (pressInPlace(mx, my, deleteTrackPlace(i, scroll)))
+					{
+						// Har tryckt på en soptunna
+						if (mw.tracks.playing.test(std::memory_order_relaxed))
+							return 0;
+						if (MessageBoxW(
+								nullptr,
+								L"Är du säker på att du vill ta bort spåret?",
+								L"Ta bort spår",
+								MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2
+							) == IDYES)
+						{
+							mw.tracks.data.erase(mw.tracks.data.begin() + i);
+							InvalidateRect(mw, nullptr, FALSE);
+						}
 						return 0;
 					}
 					if (selectedTrackPlus == -1)
