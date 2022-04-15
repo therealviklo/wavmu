@@ -13,6 +13,8 @@ private:
 	float addSectionPos;
 	float noteSize;
 
+	Offset scroll;
+
 	std::map<size_t, std::vector<size_t>> selectedSections;
 	struct SecMark
 	{
@@ -31,6 +33,8 @@ private:
 	float getLeastSnapDiff(float x, const std::vector<Track>& tracks);
 	float getSnapDiffFromSelection(const std::vector<Track>& tracks);
 	float getSecMoveDiffX() const;
+
+	void captureScroll(const std::vector<Track>& tracks);
 public:
 	TrackView();
 

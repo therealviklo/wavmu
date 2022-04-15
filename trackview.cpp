@@ -2,27 +2,27 @@
 
 namespace
 {
-	inline Placement channelHeadPlace(size_t n)
+	inline Placement channelHeadPlace(size_t n, Offset scroll)
 	{
-		return {0.0f, 100.0f * n, 200.0f, 100.0f};
+		return Placement{0.0f, 100.0f * n, 200.0f, 100.0f} + scroll.onlyY();
 	}
 
-	inline Placement trackPlusPlace(size_t n)
+	inline Placement trackPlusPlace(size_t n, Offset scroll)
 	{
-		const auto head = channelHeadPlace(n);
+		const auto head = channelHeadPlace(n, scroll);
 		return {head.x + head.w - 30.0f, head.y, 30.0f, 30.0f};
 	}
 
-	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize, float secMoveX)
+	inline Placement sectionPlace(const SectionRef& sect, size_t n, float noteSize, float secMoveX, Offset scroll)
 	{
 		const float sectLen = std::max<float>(sect.section->calcLength(), 1.0f);
-		const Placement place = channelHeadPlace(n);
+		const Placement place = channelHeadPlace(n, scroll);
 		return Placement{
 			place.x + place.w + std::max<float>(noteSize * (float)sect.timestamp + secMoveX, 0.0),
 			place.y,
 			sectLen * noteSize,
 			place.h
-		};
+		} + scroll.onlyX();
 	}
 }
 
@@ -43,7 +43,7 @@ float TrackView::sectIsSelected(size_t track, size_t sect)
 
 float TrackView::getLeastSnapDiff(float x, const std::vector<Track>& tracks)
 {
-	const Placement chp = channelHeadPlace(0);
+	const Placement chp = channelHeadPlace(0, scroll);
 	float leastSnap = chp.x + chp.w - x;
 	for (size_t i = 0; i < tracks.size(); i++)
 	{
@@ -52,7 +52,7 @@ float TrackView::getLeastSnapDiff(float x, const std::vector<Track>& tracks)
 			if (sectIsSelected(i, j)) continue;
 			const auto& sect = tracks[i].sections[j];
 
-			const Placement sectPlace = sectionPlace(sect, i, noteSize, 0.0f);
+			const Placement sectPlace = sectionPlace(sect, i, noteSize, 0.0f, scroll);
 			const float startSnap = sectPlace.x - x;
 			const float ssabs = std::fabsf(startSnap);
 			const float endSnap = sectPlace.x + sectPlace.w - x;
@@ -84,7 +84,7 @@ float TrackView::getSnapDiffFromSelection(const std::vector<Track>& tracks)
 		for (size_t j = 0; j < i.second.size(); j++)
 		{
 			const auto& sect = tracks[i.first].sections[i.second[j]];
-			const Placement sectPlace = sectionPlace(sect, i.first, noteSize, secMove->right - secMove->left);
+			const Placement sectPlace = sectionPlace(sect, i.first, noteSize, secMove->right - secMove->left, scroll);
 
 			const float startSnap = getLeastSnapDiff(sectPlace.x, tracks);
 			const float ssabs = std::fabsf(startSnap);
@@ -114,10 +114,18 @@ float TrackView::getSecMoveDiffX() const
 	return secMove ? secMove->right - secMove->left + snap : 0.0f;
 }
 
+void TrackView::captureScroll(const std::vector<Track>& tracks)
+{
+	scroll.x = std::min<float>(scroll.x, 0.0f);
+	const Placement addTrackPlace = channelHeadPlace(tracks.size(), Offset{});
+	scroll.y = std::clamp<float>(scroll.y, -(addTrackPlace.y + addTrackPlace.h), 0.0f);
+}
+
 TrackView::TrackView() :
 	selectedTrackPlus(-1),
 	addSectionPos(0.0f),
 	noteSize(50.0f),
+	scroll{0.0f, 0.0f},
 	snap(0.0f) {}
 
 LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -149,7 +157,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				{
 					constexpr float dividerW = 5.0f;
 
-					const auto place = channelHeadPlace(i);
+					const auto place = channelHeadPlace(i, scroll);
 					// Rita bakgrunden
 					mw.rt.drawRectangle(
 						D2D1::RectF(place.x + place.w, place.y, size.right, place.y + place.h),
@@ -164,7 +172,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							mw.tracks.data[i].sections[j],
 							i,
 							noteSize,
-							isSelected ? getSecMoveDiffX() : 0.0f
+							isSelected ? getSecMoveDiffX() : 0.0f,
+							scroll
 						);
 						mw.rt.drawRectangle(
 							sectPlace,
@@ -205,7 +214,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					);
 
 					// Rita plusset
-					const auto plusPlace = trackPlusPlace(i);
+					const auto plusPlace = trackPlusPlace(i, scroll);
 					if (i == (size_t)selectedTrackPlus)
 					{
 						// Valda bakgrunden
@@ -234,7 +243,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					);
 				}
 				// Rita lägg-till-track-knappen
-				const auto place = channelHeadPlace(i);
+				const auto place = channelHeadPlace(i, scroll);
 				mw.rt.drawRectangle(
 					place,
 					lightgrey
@@ -281,7 +290,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			const auto mx = GET_X_LPARAM(lParam);
 			const auto my = GET_Y_LPARAM(lParam);
 			const auto size = mw.getSize();
-			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size())))
+			if (pressInPlace(mx, my, channelHeadPlace(mw.tracks.data.size(), scroll)))
 			{
 				// Lägg till instrument
 				std::unique_ptr<wchar_t[]> instrName((wchar_t*)displayDialogueBox(createTrack, mw));
@@ -305,8 +314,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				const std::lock_guard lg(mw.tracks.mtx);
 				for (size_t i = 0; i < mw.tracks.data.size(); i++)
 				{
-					const auto headPlace = channelHeadPlace(i);
-					if (pressInPlace(mx, my, trackPlusPlace(i)))
+					const auto headPlace = channelHeadPlace(i, scroll);
+					if (pressInPlace(mx, my, trackPlusPlace(i, scroll)))
 					{
 						// Har tryckt på ett plus
 						if (i == (size_t)selectedTrackPlus)
@@ -330,7 +339,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 									mw.tracks.data[i].sections[j],
 									i,
 									noteSize,
-									0.0f
+									0.0f,
+									scroll
 								);
 							if (pressInPlace(mx, my, sectPlace) && sectIsSelected(i, j))
 							{
@@ -365,7 +375,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						{
 							mw.tracks.data[i].sections.emplace_back(SectionRef{
 								std::make_shared<Section>(Section{{}}),
-								(mx - (headPlace.x + headPlace.w)) / noteSize
+								(mx - (headPlace.x + headPlace.w) - scroll.x) / noteSize
 							});
 							selectedTrackPlus = -1;
 							InvalidateRect(mw, nullptr, FALSE);
@@ -419,7 +429,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 									mw.tracks.data[i].sections[j],
 									i,
 									noteSize,
-									0.0f
+									0.0f,
+									scroll
 								);
 							if (rectsColliding(secPlace, sm.reg))
 							{
@@ -465,7 +476,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				for (auto& secRef : mw.tracks.data[i].sections)
 				{
-					const auto secPlace = sectionPlace(secRef, i, noteSize, 0.0f);
+					const auto secPlace = sectionPlace(secRef, i, noteSize, 0.0f, scroll);
 					if (pressInPlace(mx, my, secPlace))
 					{
 						mw.vpush(std::make_unique<SectionView>(secRef));
@@ -489,7 +500,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				long long newSelectedTrackPlus = 0;
 				for (size_t i = 0; i < numTracks; i++)
 				{
-					const auto headPlace = channelHeadPlace(i);
+					const auto headPlace = channelHeadPlace(i, scroll);
 					if (my >= headPlace.y)
 					{
 						newSelectedTrackPlus = i;
@@ -498,7 +509,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				}
 				selectedTrackPlus = newSelectedTrackPlus;
 
-				const auto headPlace = channelHeadPlace(selectedTrackPlus);
+				const auto headPlace = channelHeadPlace(selectedTrackPlus, scroll);
 				addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
 				InvalidateRect(mw, nullptr, FALSE);
 			}
@@ -556,12 +567,32 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							);
 						}
 					}
+					selectedSections.clear();
 					InvalidateRect(mw, nullptr, FALSE);
 				}
 				return 0;
 			}
 		}
 		break;
+		case WM_MOUSEWHEEL:
+		{
+			const std::lock_guard lg(mw.tracks.mtx);
+			if (LOWORD(wParam) & MK_SHIFT)
+				scroll.x += GET_WHEEL_DELTA_WPARAM(wParam);
+			else
+				scroll.y += GET_WHEEL_DELTA_WPARAM(wParam);
+			captureScroll(mw.tracks.data);
+			InvalidateRect(mw, nullptr, FALSE);
+		}
+		return 0;
+		case WM_MOUSEHWHEEL:
+		{
+			const std::lock_guard lg(mw.tracks.mtx);
+			scroll.x -= GET_WHEEL_DELTA_WPARAM(wParam);
+			captureScroll(mw.tracks.data);
+			InvalidateRect(mw, nullptr, FALSE);
+		}
+		return 0;
 	}
 	return DefWindowProcW(mw, msg, wParam, lParam);
 }

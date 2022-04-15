@@ -216,7 +216,10 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		return 0;
 		case WM_MOUSEWHEEL:
 		{
-			scroll.y += GET_WHEEL_DELTA_WPARAM(wParam);
+			if (LOWORD(wParam) & MK_SHIFT)
+				scroll.x += GET_WHEEL_DELTA_WPARAM(wParam);
+			else
+				scroll.y += GET_WHEEL_DELTA_WPARAM(wParam);
 			captureScroll(mw.getSize());
 			InvalidateRect(mw, nullptr, FALSE);
 		}
