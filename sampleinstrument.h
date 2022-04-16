@@ -2,6 +2,7 @@
 #include "winerror.h"
 #include "instrument.h"
 #include "fs.h"
+#include "cfg.h"
 
 class SampleInstrument : public Instrument
 {

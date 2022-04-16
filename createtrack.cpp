@@ -105,7 +105,7 @@ INT_PTR __stdcall createTrackDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM 
 				{
 					for (const auto& i : fs::directory_iterator(instrFolder))
 					{
-						if (!i.is_directory())
+						if (!i.is_directory() && i.path().extension() != ".cfg")
 						{
 							addComboItem(i.path().filename().wstring().c_str());
 						}

@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 #include <fstream>
 #include "win.h"
 #include <wrl/client.h>
@@ -70,6 +71,17 @@ inline std::wstring stringToWstring(const std::string& s)
 		ret.length()
 	)) throw WRE(L"Failed to convert UTF-8 string to UTF-16 string");
 	return ret;
+}
+
+inline std::string stringtolower(std::string str)
+{
+	std::transform(
+		str.begin(),
+		str.end(),
+		str.begin(),
+		[](unsigned char c){ return std::tolower(c); }
+	);
+	return str;
 }
 
 template <typename T, auto Closer>
