@@ -7,7 +7,6 @@ SampleInstrument::SampleInstrument(const char* file) :
 {
 	envelope = {0.1, 0.1, 0.75, 0.1};
 	const fs::path cfg = (getInstrumentsFolder() / file += ".cfg");
-	MessageBoxW(nullptr, cfg.wstring().c_str(), L"eeeee", 0);
 	if (fs::exists(cfg))
 		readCfg(cfg.string().c_str(), envelope);
 }
