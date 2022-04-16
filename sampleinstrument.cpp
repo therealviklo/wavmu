@@ -5,7 +5,7 @@ SampleInstrument::SampleInstrument(const char* file) :
 	tone(133),
 	name(file)
 {
-	envelope = {0.1, 0.1, 0.75, 0.1};
+	envelope = {0.0, 0.0, 1.0, 0.0};
 	const fs::path cfg = (getInstrumentsFolder() / file += ".cfg");
 	if (fs::exists(cfg))
 		readCfg(cfg.string().c_str(), envelope);
