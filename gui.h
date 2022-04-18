@@ -29,15 +29,25 @@ public:
 	virtual void onResize(WORD /*width*/, WORD /*height*/) {}
 };
 
+struct Key
+{
+	bool major;
+	unsigned note;
+};
+
 class MainWindow : public Window
 {
 private:
 	std::stack<std::unique_ptr<View>> views;
 
+	HMENU majorKeyMenu;
+	HMENU minorKeyMenu;
+
 	std::string prevSaveName;
 public:
 	Tracks tracks;
 	Player player;
+	std::optional<Key> keyGuide;
 	D2DFactory d2dfac;
 	WICFactory wicfac;
 	RenderTarget rt;

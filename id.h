@@ -11,6 +11,32 @@ namespace ID
 		exportSong,
 		instrNameLbl,
 		instrNameBox,
-		createTrackBtn
+		createTrackBtn,
+
+		Bmajor,
+		ASmajor,
+		Amajor,
+		GSmajor,
+		Gmajor,
+		FSmajor,
+		Fmajor,
+		Emajor,
+		DSmajor,
+		Dmajor,
+		CSmajor,
+		Cmajor,
+
+		Bminor,
+		ASminor,
+		Aminor,
+		GSminor,
+		Gminor,
+		FSminor,
+		Fminor,
+		Eminor,
+		DSminor,
+		Dminor,
+		CSminor,
+		Cminor
 	};
 }

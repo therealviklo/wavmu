@@ -45,6 +45,47 @@ MainWindow::MainWindow() :
 					MenuItem::String{L"Öppna pr&ojekt...\tCtrl+O", ID::openProject},
 					MenuItem::String{L"&Exportera som...\tCtrl+E", ID::exportSong}
 				})
+			},
+			MenuItem::SubMenu{
+				L"&Tonart",
+				Menu({
+					MenuItem::SubMenu{
+						L"&Dur",
+						Menu({
+							MenuItem::RadioButton{L"B (H)", false, ID::Bmajor},
+							MenuItem::RadioButton{L"A#", false, ID::ASmajor},
+							MenuItem::RadioButton{L"A", false, ID::Amajor},
+							MenuItem::RadioButton{L"G#", false, ID::GSmajor},
+							MenuItem::RadioButton{L"G", false, ID::Gmajor},
+							MenuItem::RadioButton{L"F#", false, ID::FSmajor},
+							MenuItem::RadioButton{L"F", false, ID::Fmajor},
+							MenuItem::RadioButton{L"E", false, ID::Emajor},
+							MenuItem::RadioButton{L"D#", false, ID::DSmajor},
+							MenuItem::RadioButton{L"D", false, ID::Dmajor},
+							MenuItem::RadioButton{L"C#", false, ID::CSmajor},
+							MenuItem::RadioButton{L"C", false, ID::Cmajor}
+						},
+						majorKeyMenu)
+					},
+					MenuItem::SubMenu{
+						L"&Moll",
+						Menu({
+							MenuItem::RadioButton{L"B (H)", false, ID::Bminor},
+							MenuItem::RadioButton{L"A#", false, ID::ASminor},
+							MenuItem::RadioButton{L"A", false, ID::Aminor},
+							MenuItem::RadioButton{L"G#", false, ID::GSminor},
+							MenuItem::RadioButton{L"G", false, ID::Gminor},
+							MenuItem::RadioButton{L"F#", false, ID::FSminor},
+							MenuItem::RadioButton{L"F", false, ID::Fminor},
+							MenuItem::RadioButton{L"E", false, ID::Eminor},
+							MenuItem::RadioButton{L"D#", false, ID::DSminor},
+							MenuItem::RadioButton{L"D", false, ID::Dminor},
+							MenuItem::RadioButton{L"C#", false, ID::CSminor},
+							MenuItem::RadioButton{L"C", false, ID::Cminor}
+						},
+						minorKeyMenu)
+					}
+				})
 			}}),
 		nullptr,
 		CW_USEDEFAULT,
@@ -82,6 +123,19 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			if (HIWORD(wParam) == 0)
 			{
+				auto uncheck = [&](HMENU menu, UINT item) -> void {
+					MENUITEMINFOW mii{};
+					mii.cbSize = sizeof(mii);
+					mii.fMask = MIIM_STATE;
+					mii.fState = MFS_UNCHECKED;
+					if (!SetMenuItemInfoW(
+							menu,
+							item,
+							FALSE,
+							&mii
+						))
+						throw WinError(L"Unable to uncheck menu radio item");
+				};
 				switch (LOWORD(wParam))
 				{
 					case ID::saveProject:
@@ -150,6 +204,112 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 								lippincottNonFatal(L"Kunde inte exportera låt");
 							}
 						}
+					}
+					return 0;
+					case ID::Bmajor:
+					case ID::ASmajor:
+					case ID::Amajor:
+					case ID::GSmajor:
+					case ID::Gmajor:
+					case ID::FSmajor:
+					case ID::Fmajor:
+					case ID::Emajor:
+					case ID::DSmajor:
+					case ID::Dmajor:
+					case ID::CSmajor:
+					case ID::Cmajor:
+					{
+						const UINT state =
+							GetMenuState(
+								majorKeyMenu,
+								LOWORD(wParam),
+								MF_BYCOMMAND
+							);
+						if (state == static_cast<decltype(state)>(-1))
+							throw NoResWinError(L"Unable to get menu state");
+						if (state & MF_CHECKED)
+						{
+							uncheck(majorKeyMenu, LOWORD(wParam));
+							keyGuide.reset();
+						}
+						else
+						{
+							if (keyGuide && !keyGuide->major)
+							{
+								uncheck(
+									minorKeyMenu,
+									static_cast<unsigned>(ID::Cminor) - keyGuide->note
+								);
+							}
+							if (!CheckMenuRadioItem(
+									majorKeyMenu,
+									ID::Bmajor,
+									ID::Cmajor,
+									LOWORD(wParam),
+									MF_BYCOMMAND
+								))
+								throw WinError(L"Unable to check menu radio item");
+							keyGuide.emplace(
+								Key{
+									true,
+									static_cast<unsigned>(ID::Cmajor) - static_cast<unsigned>(LOWORD(wParam))
+								}
+							);
+						}
+						InvalidateRect(*this, nullptr, FALSE);
+					}
+					return 0;
+					case ID::Bminor:
+					case ID::ASminor:
+					case ID::Aminor:
+					case ID::GSminor:
+					case ID::Gminor:
+					case ID::FSminor:
+					case ID::Fminor:
+					case ID::Eminor:
+					case ID::DSminor:
+					case ID::Dminor:
+					case ID::CSminor:
+					case ID::Cminor:
+					{
+						const UINT state =
+							GetMenuState(
+								minorKeyMenu,
+								LOWORD(wParam),
+								MF_BYCOMMAND
+							);
+						if (state == static_cast<decltype(state)>(-1))
+							throw NoResWinError(L"Unable to get menu state");
+						if (state & MF_CHECKED)
+						{
+							uncheck(minorKeyMenu, LOWORD(wParam));
+							keyGuide.reset();
+						}
+						else
+						{
+							if (keyGuide && keyGuide->major)
+							{
+								uncheck(
+									majorKeyMenu,
+									static_cast<unsigned>(ID::Cmajor) - keyGuide->note
+								);
+							}
+							if (!CheckMenuRadioItem(
+									minorKeyMenu,
+									ID::Bminor,
+									ID::Cminor,
+									LOWORD(wParam),
+									MF_BYCOMMAND
+								))
+								throw WinError(L"Unable to check menu radio item");
+							keyGuide.emplace(
+								Key{
+									false,
+									static_cast<unsigned>(ID::Cminor) - static_cast<unsigned>(LOWORD(wParam))
+								}
+							);
+						}
+						InvalidateRect(*this, nullptr, FALSE);
 					}
 					return 0;
 				}

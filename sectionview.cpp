@@ -79,6 +79,8 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		{
 			const std::lock_guard lg(mw.tracks.mtx);
 
+			SolidBrush rootgrey(D2D1::ColorF(0.16f, 0.16f, 0.16f), mw.rt);
+			SolidBrush keygrey(D2D1::ColorF(0.13f, 0.13f, 0.13f), mw.rt);
 			SolidBrush subtlegrey(D2D1::ColorF(0.08f, 0.08f, 0.08f), mw.rt);
 			SolidBrush subtlessgrey(D2D1::ColorF(0.06f, 0.06f, 0.06f), mw.rt);
 			SolidBrush darkblue(D2D1::ColorF(0.0f, 0.0f, 0.2f), mw.rt);
@@ -92,34 +94,42 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			
 			const auto size = mw.getSize();
 
-			const float lineInterval = noteW / (sect.section->timesig.btm * std::exp2f(raster));
-			for (int i = -scroll.x / lineInterval; i * lineInterval + scroll.x < size.right; ++i)
-			{
-				auto iTimesExp2 = [](int i, int e) -> int {
-					if (e < 0)
-					{
-						return i >> -e;
-					}
-					else
-					{
-						return i << e;
-					}
-				};
-				auto safeMod = [](int a, int b) -> int {
-					if (!b) return 0;
-					return a % b;
-				};
-				const bool barLine = safeMod(i, iTimesExp2(sect.section->timesig.top, raster)) == 0;
-				mw.rt.drawLine(
-					D2D1::Point2F(i * lineInterval, 0.0f) + scroll.onlyX(),
-					D2D1::Point2F(i * lineInterval, size.bottom) + scroll.onlyX(),
-					barLine ? subtlessgrey : subtlegrey,
-					barLine ? 3.0f : 1.0f
-				);
-			}
+			auto inKey = [](int tone, bool major, int key) -> bool {
+				if (major)
+				{
+					const static std::vector<int> notes = {
+						0, 2, 4, 5, 7, 9, 11
+					};
+					return std::find(notes.begin(), notes.end(), (tone - key + 9 + 24) % 12) != notes.end();
+				}
+				else
+				{
+					const static std::vector<int> notes = {
+						0, 2, 3, 5, 7, 8, 10
+					};
+					return std::find(notes.begin(), notes.end(), (tone - key + 9 + 24) % 12) != notes.end();
+				}
+			};
 			for (int i = -scroll.y / noteH; i * noteH + scroll.y < size.bottom; ++i)
 			{
 				const int tone = (255 - i + 11) % 12;
+
+				if (mw.keyGuide)
+				{
+					if (inKey(tone, mw.keyGuide->major, mw.keyGuide->note))
+					{
+						mw.rt.drawRectangle(
+							Placement{
+								0.0f,
+								i * noteH,
+								static_cast<float>(size.right),
+								noteH
+							} + scroll.onlyY(),
+							(tone - mw.keyGuide->note + 9 + 24) % 12 == 0 ? rootgrey : keygrey
+						);
+					}
+				}
+
 				mw.rt.drawBitmap(
 					mw.rsc[RSC_TONER],
 					Placement{0.0f, i * noteH, 150.0f * noteH / 50.0f, 50.0f * noteH / 50.0f} + scroll.onlyY(),
@@ -167,6 +177,32 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 					D2D1::Point2F(size.right, i * noteH) + scroll.onlyY(),
 					subtlegrey,
 					3.0f
+				);
+			}
+
+			const float lineInterval = noteW / (sect.section->timesig.btm * std::exp2f(raster));
+			for (int i = -scroll.x / lineInterval; i * lineInterval + scroll.x < size.right; ++i)
+			{
+				auto iTimesExp2 = [](int i, int e) -> int {
+					if (e < 0)
+					{
+						return i >> -e;
+					}
+					else
+					{
+						return i << e;
+					}
+				};
+				auto safeMod = [](int a, int b) -> int {
+					if (!b) return 0;
+					return a % b;
+				};
+				const bool barLine = safeMod(i, iTimesExp2(sect.section->timesig.top, raster)) == 0;
+				mw.rt.drawLine(
+					D2D1::Point2F(i * lineInterval, 0.0f) + scroll.onlyX(),
+					D2D1::Point2F(i * lineInterval, size.bottom) + scroll.onlyX(),
+					barLine ? subtlessgrey : subtlegrey,
+					barLine ? 3.0f : 1.0f
 				);
 			}
 
