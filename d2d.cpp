@@ -95,6 +95,15 @@ void RenderTarget::outlineRectangle(const D2D1_RECT_F& rect, SolidBrush& brush, 
 	rt->DrawRectangle(rect, brush.brush.Get(), strokeWidth);
 }
 
+void RenderTarget::drawPolygon(PolygonGeometry& pg, D2D1_POINT_2F origin, SolidBrush& brush) noexcept
+{
+	D2D1_MATRIX_3X2_F trans;
+	rt->GetTransform(&trans);
+	rt->SetTransform(D2D1::Matrix3x2F::Translation(origin.x, origin.y) * trans);
+	rt->FillGeometry(pg.geo.Get(), brush.brush.Get());
+	rt->SetTransform(trans);
+}
+
 RenderTarget::RenderTarget(HWND hWnd, D2DFactory& d2dfac) :
 	hWnd(hWnd),
 	ver(0)
@@ -189,4 +198,23 @@ SolidBrush::SolidBrush(D2D1_COLOR_F colour, RenderTarget& rt)
 				&brush
 			),
 			L"Failed to create solid colour brush");
+}
+
+PolygonGeometry::PolygonGeometry(D2DFactory& d2dfac, const std::vector<D2D1_POINT_2F>& points)
+{
+	if (!points.size())
+		throw WRE(L"Empty polygon");
+	hrthrow(d2dfac.factory->CreatePathGeometry(&geo),
+			L"Failed to create path geometry");
+	ComPtr<ID2D1GeometrySink> sink;
+	hrthrow(geo->Open(&sink),
+			L"Failed to open geometry sink");
+	sink->BeginFigure(points[0], D2D1_FIGURE_BEGIN_FILLED);
+	for (size_t i = 1; i < points.size(); i++)
+	{
+		sink->AddLine(points[i]);
+	}
+	sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+	hrthrow(sink->Close(),
+			L"Failed to close figure");
 }

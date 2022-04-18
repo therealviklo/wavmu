@@ -141,7 +141,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, PWSTR /*pC
 		
 		MainWindow mw;
 		const HACCEL hAccel = LoadAcceleratorsW(hInstance, MAKEINTRESOURCEW(RSC_ACC));
-		mw.vpush(std::make_unique<TrackView>());
+		mw.vpush(std::make_unique<TrackView>(mw.d2dfac));
 		ShowWindow(mw, SW_SHOWDEFAULT);
 		while (mw)
 		{

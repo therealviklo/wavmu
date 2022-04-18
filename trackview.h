@@ -9,6 +9,15 @@
 class TrackView : public View
 {
 private:
+	struct SliderDrag
+	{
+		float startY;
+		size_t track;
+	};
+
+	PolygonGeometry triangle;
+	std::optional<SliderDrag> sliderDrag;
+
 	long long selectedTrackPlus;
 	float addSectionPos;
 	float noteSize;
@@ -38,7 +47,7 @@ private:
 
 	void captureScroll(const std::vector<Track>& tracks);
 public:
-	TrackView();
+	TrackView(D2DFactory& d2dfac);
 
 	LRESULT wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lParam) override;
 };

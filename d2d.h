@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include "win.h"
 #include <d2d1.h>
 #include <wrl/client.h>
@@ -11,6 +12,7 @@ using Microsoft::WRL::ComPtr;
 class D2DFactory
 {
 	friend class RenderTarget;
+	friend class PolygonGeometry;
 private:
 	ComPtr<ID2D1Factory> factory;
 public:
@@ -73,6 +75,7 @@ public:
 	void drawLine(D2D1_POINT_2F a, D2D1_POINT_2F b, SolidBrush& brush, float strokeWidth) noexcept;
 	void drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noexcept;
 	void outlineRectangle(const D2D1_RECT_F& rect, SolidBrush& brush, float strokeWidth) noexcept;
+	void drawPolygon(PolygonGeometry& pg, D2D1_POINT_2F origin, SolidBrush& brush) noexcept;
 };
 
 class Bitmap
@@ -102,4 +105,13 @@ private:
 	ComPtr<ID2D1SolidColorBrush> brush;
 public:
 	SolidBrush(D2D1_COLOR_F colour, RenderTarget& rt);
+};
+
+class PolygonGeometry
+{
+	friend class RenderTarget;
+private:
+	ComPtr<ID2D1PathGeometry> geo;
+public:
+	PolygonGeometry(D2DFactory& d2dfac, const std::vector<D2D1_POINT_2F>& points);
 };

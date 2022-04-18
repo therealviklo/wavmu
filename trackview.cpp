@@ -30,6 +30,29 @@ namespace
 			place.h
 		} + scroll.onlyX();
 	}
+
+	inline Placement trianglePlace(size_t n, Offset scroll)
+	{
+		const auto head = channelHeadPlace(n, scroll);
+		const auto plus = trackPlusPlace(n, scroll);
+		return {
+			plus.x + 8.0f,
+			plus.y + plus.h + 5.0f,
+			head.x + head.w - 8.0f - (plus.x + 8.0f),
+			head.y + head.h - 5.0f - (plus.y + plus.h + 5.0f)
+		};
+	}
+
+	inline Placement sliderPlace(size_t n, double val, Offset scroll)
+	{
+		const auto tp = trianglePlace(n, scroll);
+		return {
+			tp.x,
+			static_cast<float>(tp.y + tp.h * (1.0 - val) - 5.0 / 2.0),
+			tp.w,
+			5.0f	
+		};
+	}
 }
 
 float TrackView::sectIsSelected(size_t track, size_t sect)
@@ -127,7 +150,15 @@ void TrackView::captureScroll(const std::vector<Track>& tracks)
 	scroll.y = std::clamp<float>(scroll.y, -(addTrackPlace.y + addTrackPlace.h), 0.0f);
 }
 
-TrackView::TrackView() :
+TrackView::TrackView(D2DFactory& d2dfac) :
+	triangle(d2dfac, [](){
+		const auto place = trianglePlace(0, {});
+		return std::vector<D2D1_POINT_2F>({
+			{0.0f, 0.0f},
+			{place.w, 0.0f},
+			{place.w / 2.0f, place.h}
+		});
+	}()),
 	selectedTrackPlus(-1),
 	addSectionPos(0.0f),
 	noteSize(50.0f),
@@ -219,7 +250,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						dividerW
 					);
 
-					// Rita plusset
+					// Rita pluset
 					const auto plusPlace = trackPlusPlace(i, scroll);
 					if (i == (size_t)selectedTrackPlus)
 					{
@@ -247,6 +278,17 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						),
 						darkgrey
 					);
+
+					// Rita triangeln
+					const auto tp = trianglePlace(i, scroll);
+					mw.rt.drawPolygon(
+						triangle,
+						D2D1::Point2F(tp.x, tp.y),
+						darkgrey
+					);
+					// Rita slidern
+					const auto sp = sliderPlace(i, mw.tracks.data[i].volume, scroll);
+					mw.rt.drawRectangle(sp, lightishgrey);
 
 					// Rita soptunnan
 					const auto delTrackPlace = deleteTrackPlace(i, scroll);
@@ -359,6 +401,23 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 						}
 						addSectionPos = std::max<float>(mx - (headPlace.x + headPlace.w), 0.0f);
 						selectedSections.clear();
+						InvalidateRect(mw, nullptr, FALSE);
+						return 0;
+					}
+					const auto tp = trianglePlace(i, scroll);
+					if (pressInPlace(mx, my, tp))
+					{
+						// Har tryckt på slidern
+						sliderDrag.emplace(SliderDrag{static_cast<float>(my), i});
+						if (!mw.tracks.playing.test(std::memory_order_relaxed))
+						{
+							auto& vol = mw.tracks.data[i].volume;
+							vol = std::clamp<double>(
+								(tp.y + tp.h - my) / tp.h,
+								0.0,
+								1.0
+							);
+						}
 						InvalidateRect(mw, nullptr, FALSE);
 						return 0;
 					}
@@ -538,6 +597,25 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				InvalidateRect(mw, nullptr, FALSE);
 				return 0;
 			}
+			if (sliderDrag)
+			{
+				const std::lock_guard lg(mw.tracks.mtx);
+				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				{
+					const auto tp = trianglePlace(sliderDrag->track, scroll);
+					auto& vol = mw.tracks.data[sliderDrag->track].volume;
+					vol =
+						std::clamp<double>(
+							(tp.y + tp.h - my) / tp.h,
+							0.0,
+							1.0
+						);
+				}
+
+				sliderDrag.reset();
+				InvalidateRect(mw, nullptr, FALSE);
+				return 0;
+			}
 		}
 		break;
 		case WM_LBUTTONDBLCLK:
@@ -598,6 +676,22 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				secMove->right = mx;
 				secMove->bottom = my;
 				snap = getSnapDiffFromSelection(mw.tracks.data);
+				InvalidateRect(mw, nullptr, FALSE);
+			}
+			if (sliderDrag)
+			{
+				const std::lock_guard lg(mw.tracks.mtx);
+				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				{
+					const auto tp = trianglePlace(sliderDrag->track, scroll);
+					auto& vol = mw.tracks.data[sliderDrag->track].volume;
+					vol =
+						std::clamp<double>(
+							(tp.y + tp.h - my) / tp.h,
+							0.0,
+							1.0
+						);
+				}
 				InvalidateRect(mw, nullptr, FALSE);
 			}
 		}

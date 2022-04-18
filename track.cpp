@@ -78,6 +78,8 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 		auto& currIteratorTrack = trackIterators[i];
 		const Instrument* const currInstrument = currTrack.instrument ? currTrack.instrument.get() : &defaultInstrument;
 		
+		const double vol = 4.0 * tracks.data[i].volume * tracks.data[i].volume;
+
 		for (size_t j = 0; j < currIteratorTrack.size(); j++)
 		{
 			auto& currSection = currTrack.sections[j];
@@ -94,9 +96,11 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 				}
 
 				sp.samples[0] += currInstrument->at(i->timeElapsed, 0, i->tone)
-								* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+								* currInstrument->envelopeLevel(i->timeElapsed, i->duration)
+								* vol;
 				sp.samples[1] += currInstrument->at(i->timeElapsed, 1, i->tone)
-								* currInstrument->envelopeLevel(i->timeElapsed, i->duration);
+								* currInstrument->envelopeLevel(i->timeElapsed, i->duration)
+								* vol;
 
 				i++;
 			}

@@ -13,6 +13,7 @@ struct Track
 {
 	std::unique_ptr<Instrument> instrument;
 	std::vector<SectionRef> sections;
+	double volume = 0.5;
 };
 
 struct Tracks
