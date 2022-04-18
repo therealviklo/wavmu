@@ -181,6 +181,7 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 							try
 							{
 								loadSong(tracks, file->c_str());
+								prevSaveName = *file;
 								InvalidateRect(*this, nullptr, FALSE);
 							}
 							catch (...)

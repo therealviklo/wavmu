@@ -172,6 +172,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		case WM_PAINT:
 		{
 			SolidBrush darkgrey(D2D1::ColorF(0.05f, 0.05f, 0.05f), mw.rt);
+			SolidBrush darkishgrey(D2D1::ColorF(0.07f, 0.07f, 0.07f), mw.rt);
 			SolidBrush grey(D2D1::ColorF(0.1f, 0.1f, 0.1f), mw.rt);
 			SolidBrush lightishgrey(D2D1::ColorF(0.13f, 0.13f, 0.13f), mw.rt);
 			SolidBrush lightgrey(D2D1::ColorF(0.2f, 0.2f, 0.2f), mw.rt);
@@ -284,11 +285,11 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					mw.rt.drawPolygon(
 						triangle,
 						D2D1::Point2F(tp.x, tp.y),
-						darkgrey
+						darkishgrey
 					);
 					// Rita slidern
 					const auto sp = sliderPlace(i, mw.tracks.data[i].volume, scroll);
-					mw.rt.drawRectangle(sp, lightishgrey);
+					mw.rt.drawRectangle(sp, lightgrey);
 
 					// Rita soptunnan
 					const auto delTrackPlace = deleteTrackPlace(i, scroll);
