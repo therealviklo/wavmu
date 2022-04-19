@@ -23,6 +23,15 @@ WICFactory::WICFactory()
 	))) throw WinError(L"Failed to create WIC factory", hr);
 }
 
+DWFactory::DWFactory()
+{
+	hrthrow(DWriteCreateFactory(
+				DWRITE_FACTORY_TYPE_SHARED,
+				__uuidof(IDWriteFactory),
+				&factory),
+			L"Failed to create DWrite factory");
+}
+
 void RenderTarget::createRenderTarget(D2DFactory& d2dfac)
 {
 	HRESULT hr = 0;
@@ -102,6 +111,18 @@ void RenderTarget::drawPolygon(PolygonGeometry& pg, D2D1_POINT_2F origin, SolidB
 	rt->SetTransform(D2D1::Matrix3x2F::Translation(origin.x, origin.y) * trans);
 	rt->FillGeometry(pg.geo.Get(), brush.brush.Get());
 	rt->SetTransform(trans);
+}
+
+void RenderTarget::drawText(const std::wstring& str, Font& font, const D2D1_RECT_F& rect, SolidBrush& brush, bool clip)
+{
+	rt->DrawTextW(
+		str.c_str(),
+		str.length(),
+		font.font.Get(),
+		rect,
+		brush.brush.Get(),
+		clip ? D2D1_DRAW_TEXT_OPTIONS_CLIP : D2D1_DRAW_TEXT_OPTIONS_NONE
+	);
 }
 
 RenderTarget::RenderTarget(HWND hWnd, D2DFactory& d2dfac) :
@@ -217,4 +238,25 @@ PolygonGeometry::PolygonGeometry(D2DFactory& d2dfac, const std::vector<D2D1_POIN
 	sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 	hrthrow(sink->Close(),
 			L"Failed to close figure");
+}
+
+Font::Font(
+	DWFactory& dwfac,
+	const wchar_t* fontname,
+	DWRITE_FONT_WEIGHT fweight,
+	DWRITE_FONT_STYLE fstyle,
+	DWRITE_FONT_STRETCH fstretch,
+	float size,
+	const wchar_t* locale)
+{
+	hrthrow(dwfac.factory->CreateTextFormat(
+				fontname,
+				nullptr,
+				fweight,
+				fstyle,
+				fstretch,
+				size,
+				locale,
+				&font
+			), L"Failed to create text format");
 }

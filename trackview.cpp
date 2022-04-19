@@ -53,6 +53,13 @@ namespace
 			5.0f	
 		};
 	}
+
+	inline Placement trackLabelPlace(size_t n, Offset scroll)
+	{
+		const auto chp = channelHeadPlace(n, scroll);
+		const auto pp = trackPlusPlace(n, scroll);
+		return {chp.x, chp.y, pp.x - chp.x, pp.h};
+	}
 }
 
 float TrackView::sectIsSelected(size_t track, size_t sect)
@@ -181,6 +188,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			SolidBrush blue(D2D1::ColorF(0.0f, 0.0f, 0.4f), mw.rt);
 			SolidBrush seldarkblue(D2D1::ColorF(0.0f, 0.0f, 0.3f), mw.rt);
 			SolidBrush selblue(D2D1::ColorF(0.0f, 0.0f, 0.5f, 0.5f), mw.rt);
+			SolidBrush subtlewhite(D2D1::ColorF(0.8f, 0.8f, 0.8f), mw.rt);
 
 			const auto size = mw.getSize();
 
@@ -314,6 +322,14 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 							delTrackPlace.y + delTrackPlace.h / 2.0f - 3.0f
 						),
 						darkgrey
+					);
+
+					// Rita namnet
+					mw.rt.drawText(
+						mw.tracks.data[i].instrument->getDispName(),
+						mw.font1,
+						trackLabelPlace(i, scroll),
+						subtlewhite
 					);
 				}
 				// Rita lägg-till-track-knappen

@@ -48,8 +48,10 @@ public:
 	Tracks tracks;
 	Player player;
 	std::optional<Key> keyGuide;
+
 	D2DFactory d2dfac;
 	WICFactory wicfac;
+	DWFactory dwfac;
 	RenderTarget rt;
 	struct RSC
 	{
@@ -64,6 +66,8 @@ public:
 			return bmps[i - from];
 		}
 	} rsc;
+
+	Font font1;
 
 	MainWindow();
 	

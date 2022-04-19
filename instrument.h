@@ -20,6 +20,7 @@ public:
 	constexpr double getReleaseTime() const noexcept {return envelope.release;}
 
 	virtual const char* getName() const = 0;
+	virtual const wchar_t* getDispName() const = 0;
 };
 
 extern const Instrument& defaultInstrument;

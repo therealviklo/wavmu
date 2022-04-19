@@ -3,7 +3,8 @@
 SampleInstrument::SampleInstrument(const char* file) :
 	wave(decodeFile((getInstrumentsFolder() / file).string().c_str())),
 	tone(133),
-	name(file)
+	name(file),
+	dispName(stringToWstring(name))
 {
 	envelope = {0.0, 0.0, 1.0, 0.0};
 	const fs::path cfg = (getInstrumentsFolder() / file += ".cfg");
@@ -19,4 +20,9 @@ Sample SampleInstrument::at(double pos, uint16_t channel, Tone tone) const
 const char* SampleInstrument::getName() const
 {
 	return name.c_str();
+}
+
+const wchar_t* SampleInstrument::getDispName() const
+{
+	return dispName.c_str();
 }

@@ -2,6 +2,7 @@
 #include <vector>
 #include "win.h"
 #include <d2d1.h>
+#include <dwrite.h>
 #include <wrl/client.h>
 #include <wincodec.h>
 #include "winerror.h"
@@ -26,6 +27,15 @@ private:
 	ComPtr<IWICImagingFactory> factory;
 public:
 	WICFactory();
+};
+
+class DWFactory
+{
+	friend class Font;
+private:
+	ComPtr<IDWriteFactory> factory;
+public:
+	DWFactory();
 };
 
 class RenderTarget
@@ -76,6 +86,7 @@ public:
 	void drawRectangle(const D2D1_RECT_F& rect, SolidBrush& brush) noexcept;
 	void outlineRectangle(const D2D1_RECT_F& rect, SolidBrush& brush, float strokeWidth) noexcept;
 	void drawPolygon(PolygonGeometry& pg, D2D1_POINT_2F origin, SolidBrush& brush) noexcept;
+	void drawText(const std::wstring& str, Font& font, const D2D1_RECT_F& rect, SolidBrush& brush, bool clip = true);
 };
 
 class Bitmap
@@ -114,4 +125,21 @@ private:
 	ComPtr<ID2D1PathGeometry> geo;
 public:
 	PolygonGeometry(D2DFactory& d2dfac, const std::vector<D2D1_POINT_2F>& points);
+};
+
+class Font
+{
+	friend class RenderTarget;
+private:
+	ComPtr<IDWriteTextFormat> font;
+public:
+	Font(
+		DWFactory& dwfac,
+		const wchar_t* fontname,
+		DWRITE_FONT_WEIGHT fweight,
+		DWRITE_FONT_STYLE fstyle,
+		DWRITE_FONT_STRETCH fstretch,
+		float size,
+		const wchar_t* locale = L"en-us"
+	);
 };

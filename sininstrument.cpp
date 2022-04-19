@@ -17,3 +17,8 @@ const char* SinInstrument::getName() const
 {
 	return "";
 }
+
+const wchar_t* SinInstrument::getDispName() const
+{
+	return L"Sinus";
+}

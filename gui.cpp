@@ -93,7 +93,15 @@ MainWindow::MainWindow() :
 		false
 	),
 	rt(*this, d2dfac),
-	rsc(wicfac, rt) {}
+	rsc(wicfac, rt),
+	font1(
+		dwfac,
+		L"Arial",
+		DWRITE_FONT_WEIGHT_NORMAL,
+		DWRITE_FONT_STYLE_NORMAL,
+		DWRITE_FONT_STRETCH_NORMAL,
+		18.0f
+	) {}
 
 void MainWindow::vpush(std::unique_ptr<View> view)
 {
