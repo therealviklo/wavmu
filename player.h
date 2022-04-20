@@ -66,4 +66,6 @@ public:
 
 	void start(Tracks& tracks, BPM bpm, double at = 0.0);
 	void stop();
+
+	bool playing() const noexcept { return (bool)playState; }
 };

@@ -9,7 +9,7 @@ void saveSong(Tracks& tracks, const char* filename)
 		std::memcpy(&data[currSize], &x, sizeof(x));
 	};
 	{
-		const std::unique_lock ul(tracks.mtx);
+		const std::shared_lock sl(tracks.mtx);
 
 		// Versionsnummer
 		write((std::uint64_t)3ull);
@@ -113,8 +113,8 @@ void loadSong1(Tracks& tracks, size_t oldcur, const std::vector<unsigned char>& 
 		}
 	}
 
-	const std::unique_lock ul(tracks.mtx);
-	if (tracks.playing.test())
+	std::unique_lock ul(tracks.mtx, std::defer_lock);
+	if (!ul.try_lock())
 		throw WRE(L"Song is playing");
 	tracks.data = std::move(newtracks);
 }
@@ -164,8 +164,8 @@ void loadSong2(Tracks& tracks, size_t oldcur, const std::vector<unsigned char>& 
 		}
 	}
 
-	const std::unique_lock ul(tracks.mtx);
-	if (tracks.playing.test())
+	std::unique_lock ul(tracks.mtx, std::defer_lock);
+	if (!ul.try_lock())
 		throw WRE(L"Song is playing");
 	tracks.data = std::move(newtracks);
 }
@@ -216,8 +216,8 @@ void loadSong3(Tracks& tracks, size_t oldcur, const std::vector<unsigned char>& 
 		}
 	}
 
-	const std::unique_lock ul(tracks.mtx);
-	if (tracks.playing.test())
+	std::unique_lock ul(tracks.mtx, std::defer_lock);
+	if (!ul.try_lock())
 		throw WRE(L"Song is playing");
 	tracks.data = std::move(newtracks);
 }

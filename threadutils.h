@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <atomic>
+#include <shared_mutex>
 #include "utils.h"
 
 // class Semaphore : private UHandle<HANDLE, &CloseHandle>
@@ -112,5 +113,243 @@ public:
 			clear(std::memory_order_relaxed);
 		else
 			clear();
+	}
+};
+
+class SpecialReaderLock
+{
+private:
+	std::atomic_uint64_t sl;
+	std::atomic_flag sr;
+	std::atomic_flag el;
+
+	template <typename T>
+	static T clearIfTrue(T val, std::atomic_flag& af) noexcept
+	{
+		if (val)
+		{
+			af.clear();
+			af.notify_all();
+		}
+		return val;
+	};
+
+	template <typename T>
+	static T subIfTrue(T val, std::atomic_uint64_t& a) noexcept
+	{
+		if (val)
+		{
+			a--;
+			a.notify_all();
+		}
+		return val;
+	};
+public:
+	SpecialReaderLock() noexcept :
+		sl(0ull),
+		sr{},
+		el{} {}
+	
+	void lock() noexcept
+	{
+		do
+		{
+			do
+			{
+				do
+				{
+					while (const std::uint64_t old = sl.load())
+					{
+						sl.wait(old);
+					}
+					sr.wait(true);
+					el.wait(true);
+				} while (el.test_and_set());
+				// el.notify_all();
+			} while (clearIfTrue(sl.load(), el));
+		} while (clearIfTrue(sr.test(), el));
+	}
+
+	/* Väntar på trådar med shared eller exclusive access, returnerar
+	   falskt om den specialla läsaren har låst. */
+	bool try_lock() noexcept
+	{
+		do
+		{
+			do
+			{
+				if (sr.test())
+					return false;
+				while (const std::uint64_t old = sl.load())
+				{
+					sl.wait(old);
+				}
+				el.wait(true);
+			} while (el.test_and_set());
+			// el.notify_all();
+			if (sr.test())
+			{
+				el.clear();
+				el.notify_all();
+				return false;
+			}
+		} while (clearIfTrue(sl.load(), el));
+		return true;
+	}
+
+	void unlock() noexcept
+	{
+		el.clear();
+		el.notify_all();
+	}
+
+	void lock_shared() noexcept
+	{
+		do
+		{
+			el.wait(true);
+			sl++;
+			sl.notify_all();
+		} while (subIfTrue(el.test(), sl));
+	}
+
+	void unlock_shared() noexcept
+	{
+		sl--;
+		sl.notify_all();
+	}
+
+	void lock_special() noexcept
+	{
+		do
+		{
+			do
+			{
+				el.wait(true);
+				sr.wait(true);
+			} while (sr.test_and_set());
+			// sr.notify_all();
+		} while (clearIfTrue(el.test(), sr));
+	}
+
+	void unlock_special() noexcept
+	{
+		sr.clear();
+		sr.notify_all();
+	}
+
+	// Uppgradera från speciell till speciell och exklusiv.
+	void upgrade() noexcept
+	{
+		do
+		{
+			while (const std::uint64_t old = sl.load())
+			{
+				sl.wait(old);
+			}
+			do
+			{
+				el.wait(true);
+			} while (el.test_and_set());
+			// el.notify_all();
+		} while (clearIfTrue(sl.load(), el));
+	}
+};
+
+class ExclusiveLockGuard
+{
+private:
+	std::shared_lock<SpecialReaderLock>& sl;
+	std::unique_lock<SpecialReaderLock> ul;
+public:
+	ExclusiveLockGuard(std::shared_lock<SpecialReaderLock>& sl) :
+		sl(sl),
+		ul(*sl.mutex(), std::defer_lock) {}
+	~ExclusiveLockGuard()
+	{
+		if (ul.owns_lock())
+		{
+			ul.unlock();
+			sl.lock();
+		}
+	}
+
+	ExclusiveLockGuard(const ExclusiveLockGuard&) = delete;
+	ExclusiveLockGuard& operator=(const ExclusiveLockGuard&) = delete;
+
+	void lock()
+	{
+		sl.unlock();
+		try
+		{
+			ul.lock();
+		}
+		catch (...)
+		{
+			sl.lock();
+			throw;
+		}
+	}
+
+	bool try_lock()
+	{
+		sl.unlock();
+		bool locked = false;
+		try
+		{
+			locked = ul.try_lock();
+		}
+		catch (...)
+		{
+			sl.lock();
+			throw;
+		}
+		if (locked)
+		{
+			return true;
+		}
+		else
+		{
+			sl.lock();
+			return false;
+		}
+	}
+
+	void unlock()
+	{
+		ul.unlock();
+		sl.lock();
+	}
+};
+
+class SpecialLockGuard
+{
+private:
+	SpecialReaderLock& srl;
+public:
+	SpecialLockGuard(SpecialReaderLock& srl) noexcept :
+		srl(srl)
+	{
+		srl.lock_special();
+	}
+	~SpecialLockGuard()
+	{
+		srl.unlock_special();
+	}
+};
+
+class UpgradedLockGuard
+{
+private:
+	SpecialReaderLock& srl;
+public:
+	UpgradedLockGuard(SpecialReaderLock& srl) noexcept :
+		srl(srl)
+	{
+		srl.upgrade();
+	}
+	~UpgradedLockGuard()
+	{
+		srl.unlock();
 	}
 };

@@ -35,8 +35,8 @@ double SectionView::NoteSelect::getTime(float x, Offset scroll, TimeSignature ti
 
 void SectionView::deleteNotes(MainWindow& mw)
 {
-	const std::lock_guard lg(mw.tracks.mtx);
-	if (!mw.tracks.playing.test(std::memory_order_relaxed))
+	std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+	if (ul.try_lock())
 	{
 		std::sort(markedNotes.begin(), markedNotes.end(), std::greater<size_t>());
 		for (const auto& i : markedNotes)
@@ -77,7 +77,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 	{
 		case WM_PAINT:
 		{
-			const std::lock_guard lg(mw.tracks.mtx);
+			const std::shared_lock sl(mw.tracks.mtx);
 
 			SolidBrush rootgrey(D2D1::ColorF(0.16f, 0.16f, 0.16f), mw.rt);
 			SolidBrush keygrey(D2D1::ColorF(0.13f, 0.13f, 0.13f), mw.rt);
@@ -273,18 +273,14 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			{
 				case VK_SPACE:
 				{
-					auto checkIfPlaying = [&mw]() -> bool {
-						const std::lock_guard lg(mw.tracks.mtx);
-						return mw.tracks.playing.test(std::memory_order_relaxed);
-					};
-					if (checkIfPlaying())
+					if (mw.player.playing())
 					{
 						mw.player.stop();
 					}
 					else
 					{
 						const double timestamp = [&]() -> double {
-							const std::lock_guard lg(mw.tracks.mtx);
+							const std::shared_lock sl(mw.tracks.mtx);
 							return sect.timestamp;
 						}();
 						mw.player.start(mw.tracks, 240, timestamp);
@@ -331,7 +327,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		break;
 		case WM_RBUTTONDOWN:
 		{
-			const std::lock_guard lg(mw.tracks.mtx);
+			const std::shared_lock sl(mw.tracks.mtx);
 			const int x = GET_X_LPARAM(lParam); 
 			const int y = GET_Y_LPARAM(lParam); 
 			ns.tone = ns.getTone(y, scroll);
@@ -346,8 +342,8 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 			if (ns.selecting)
 			{
 				ns.selecting = false;
-				const std::lock_guard lg(mw.tracks.mtx);
-				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+				if (ul.try_lock())
 				{
 					if (std::abs(ns.end - ns.start) >= 0.5 / sect.section->timesig.btm)
 					{
@@ -397,7 +393,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 				}
 
 				markedNotes.clear();
-				const std::lock_guard lg(mw.tracks.mtx);
+				const std::shared_lock sl(mw.tracks.mtx);
 				for (size_t i = 0; i < sect.section->notes.size(); ++i)
 				{
 					if (rectsColliding(nm.reg, getNotePos(sect.section->notes[i], scroll)))
@@ -414,7 +410,7 @@ LRESULT SectionView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPa
 		{
 			if (ns.selecting)
 			{
-				const std::lock_guard lg(mw.tracks.mtx);
+				const std::shared_lock lg(mw.tracks.mtx);
 				const int x = GET_X_LPARAM(lParam);
 				ns.end = ns.getTime(x, scroll, sect.section->timesig, raster);
 				InvalidateRect(mw, nullptr, FALSE);

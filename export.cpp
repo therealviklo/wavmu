@@ -4,7 +4,7 @@ void exportSong(Tracks& tracks, BPM bpm, const char* filename)
 {
 	size_t numsamples = 0;
 	{
-		std::lock_guard const lg(tracks.mtx);
+		const std::shared_lock sl(tracks.mtx);
 		for (const auto& i : tracks.data)
 		{
 			for (const auto& j : i.sections)

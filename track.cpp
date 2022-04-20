@@ -1,17 +1,12 @@
 #include "track.h"
 
-PlayState::PlayState(Tracks& tracks, BPM bpm)
-	: position(0),
-	  tracks(tracks),
-	  bpm(bpm)
+PlayState::PlayState(Tracks& tracks, BPM bpm) :
+	playingLock(tracks.mtx),
+	position(0),
+	tracks(tracks),
+	bpm(bpm)
 {
-	// Lås trackmutexen för vi ska ändra på tracks.
-	const std::lock_guard<std::mutex> lg(tracks.mtx);
-	
-	// Försök att låsa "playing"-mutexen och swappa in den i playingLock.
-	std::unique_lock<AtomicFlagLock<true>> tmpUl(tracks.playing, std::defer_lock);
-	if (!tmpUl.try_lock()) throw AlreadyPlayingException();
-	playingLock.swap(tmpUl);
+	UpgradedLockGuard el(tracks.mtx);
 
 	// Vi ska iterera igenom alla track nu så vi ändrar storleken på vectorn till antalet track.
 	trackIterators.resize(tracks.data.size());
@@ -67,7 +62,6 @@ void advanceSection(SectionRef& currSection, PlayState::SectionPlayState& currIt
    då behöver du kanske ändra PlayState::skip() också ;) */
 PlayState::SamplePair PlayState::get(uint32_t sampleRate)
 {
-	const std::lock_guard<std::mutex> lg(tracks.mtx);
 	SamplePair sp{0, 0};
 
 	position += 1.0 / sampleRate;
@@ -114,8 +108,6 @@ PlayState::SamplePair PlayState::get(uint32_t sampleRate)
    då behöver du kanske ändra PlayState::get() också ;) */
 void PlayState::skip(double time)
 {
-	const std::lock_guard<std::mutex> lg(tracks.mtx);
-
 	position += time;
 
 	for (size_t i = 0; i < trackIterators.size(); i++)

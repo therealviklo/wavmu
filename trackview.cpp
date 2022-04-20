@@ -196,7 +196,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			mw.rt.clear(0.05f, 0.05f, 0.05f);
 
 			{
-				const std::lock_guard lg(mw.tracks.mtx);
+				const std::shared_lock sl(mw.tracks.mtx);
 				size_t i = 0;
 				// Tracks
 				for (; i < mw.tracks.data.size(); i++)
@@ -386,8 +386,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				std::unique_ptr<wchar_t[]> instrName((wchar_t*)displayDialogueBox(createTrack, mw));
 				if (instrName)
 				{
-					const std::lock_guard lg(mw.tracks.mtx);
-					if (!mw.tracks.playing.test(std::memory_order::relaxed))
+					std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+					if (ul.try_lock())
 					{
 						mw.tracks.data.emplace_back(
 							Track{
@@ -401,7 +401,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				return 0;
 			}
 			{
-				const std::lock_guard lg(mw.tracks.mtx);
+				std::shared_lock sl(mw.tracks.mtx);
 				for (size_t i = 0; i < mw.tracks.data.size(); i++)
 				{
 					const auto headPlace = channelHeadPlace(i, scroll);
@@ -426,7 +426,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					{
 						// Har tryckt på slidern
 						sliderDrag.emplace(SliderDrag{static_cast<float>(my), i});
-						if (!mw.tracks.playing.test(std::memory_order_relaxed))
+						ExclusiveLockGuard elg(sl);
+						if (elg.try_lock())
 						{
 							auto& vol = mw.tracks.data[i].volume;
 							vol = std::clamp<double>(
@@ -441,7 +442,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					if (pressInPlace(mx, my, deleteTrackPlace(i, scroll)))
 					{
 						// Har tryckt på en soptunna
-						if (mw.tracks.playing.test(std::memory_order_relaxed))
+						ExclusiveLockGuard elg(sl);
+						if (!elg.try_lock())
 							return 0;
 						if (MessageBoxW(
 								nullptr,
@@ -544,7 +546,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				selectedSections.clear();
 				if (sm.reg.right == sm.reg.left && sm.reg.bottom == sm.reg.top)
 				{
-					const std::lock_guard lg(mw.tracks.mtx);
+					const std::shared_lock sl(mw.tracks.mtx);
 					for (size_t i = 0; i < mw.tracks.data.size(); i++)
 					{
 						for (size_t j = 0; j < mw.tracks.data[i].sections.size(); j++)
@@ -567,7 +569,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				}
 				else
 				{
-					const std::lock_guard lg(mw.tracks.mtx);
+					const std::shared_lock sl(mw.tracks.mtx);
 					for (size_t i = 0; i < mw.tracks.data.size(); i++)
 					{
 						std::vector<size_t> selSectsForTrack;
@@ -596,9 +598,9 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				secMove->right = mx;
 				secMove->bottom = my;
-				const std::lock_guard lg(mw.tracks.mtx);
 				const float diffX = getSecMoveDiffX();
-				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+				if (ul.try_lock())
 				{
 					for (const auto& i : selectedSections)
 					{
@@ -616,8 +618,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			}
 			if (sliderDrag)
 			{
-				const std::lock_guard lg(mw.tracks.mtx);
-				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+				if (ul.try_lock())
 				{
 					const auto tp = trianglePlace(sliderDrag->track, scroll);
 					auto& vol = mw.tracks.data[sliderDrag->track].volume;
@@ -639,7 +641,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		{
 			const int mx = GET_X_LPARAM(lParam);
 			const int my = GET_Y_LPARAM(lParam);
-			const std::lock_guard lg(mw.tracks.mtx);
+			const std::shared_lock sl(mw.tracks.mtx);
 			for (size_t i = 0; i < mw.tracks.data.size(); i++)
 			{
 				for (auto& secRef : mw.tracks.data[i].sections)
@@ -663,7 +665,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				size_t numTracks;
 				{
-					const std::lock_guard lg(mw.tracks.mtx);
+					const std::shared_lock sl(mw.tracks.mtx);
 					numTracks = mw.tracks.data.size();
 				}
 				long long newSelectedTrackPlus = 0;
@@ -697,8 +699,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			}
 			if (sliderDrag)
 			{
-				const std::lock_guard lg(mw.tracks.mtx);
-				if (!mw.tracks.playing.test(std::memory_order_relaxed))
+				std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+				if (ul.try_lock())
 				{
 					const auto tp = trianglePlace(sliderDrag->track, scroll);
 					auto& vol = mw.tracks.data[sliderDrag->track].volume;
@@ -719,11 +721,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				case VK_SPACE:
 				{
-					auto checkIfPlaying = [&mw]() -> bool {
-						const std::lock_guard lg(mw.tracks.mtx);
-						return mw.tracks.playing.test(std::memory_order_relaxed);
-					};
-					if (checkIfPlaying())
+					if (mw.player.playing())
 					{
 						mw.player.stop();
 					}
@@ -735,8 +733,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 				return 0;
 				case VK_DELETE:
 				{
-					const std::lock_guard lg(mw.tracks.mtx);
-					if (mw.tracks.playing.test(std::memory_order_relaxed))
+					std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+					if (!ul.try_lock())
 						return 0;
 					for (auto& i : selectedSections)
 					{
@@ -761,7 +759,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		break;
 		case WM_MOUSEWHEEL:
 		{
-			const std::lock_guard lg(mw.tracks.mtx);
+			const std::shared_lock sl(mw.tracks.mtx);
 			if (LOWORD(wParam) & MK_SHIFT)
 				scroll.x += GET_WHEEL_DELTA_WPARAM(wParam);
 			else
@@ -772,7 +770,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 		return 0;
 		case WM_MOUSEHWHEEL:
 		{
-			const std::lock_guard lg(mw.tracks.mtx);
+			const std::shared_lock sl(mw.tracks.mtx);
 			scroll.x -= GET_WHEEL_DELTA_WPARAM(wParam);
 			captureScroll(mw.tracks.data);
 			InvalidateRect(mw, nullptr, FALSE);
@@ -788,7 +786,7 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					{
 						bool sectAdded = false;
 						std::map<size_t, std::vector<SectionRef>> newClipboard;
-						const std::lock_guard lg(mw.tracks.mtx);
+						const std::shared_lock sl(mw.tracks.mtx);
 						for (const auto& i : selectedSections)
 						{
 							std::vector<SectionRef> sects;
@@ -805,8 +803,8 @@ LRESULT TrackView::wndProc(MainWindow& mw, UINT msg, WPARAM wParam, LPARAM lPara
 					return 0;
 					case ACC_PASTE:
 					{
-						const std::lock_guard lg(mw.tracks.mtx);
-						if (mw.tracks.playing.test(std::memory_order_relaxed))
+						std::unique_lock ul(mw.tracks.mtx, std::defer_lock);
+						if (!ul.try_lock())
 							return 0;
 						selectedSections.clear();
 						for (const auto& i : clipboard)

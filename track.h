@@ -1,4 +1,5 @@
 #pragma once
+#include <shared_mutex>
 #include <algorithm>
 #include "instrument.h"
 #include "threadutils.h"
@@ -18,21 +19,13 @@ struct Track
 
 struct Tracks
 {
-	// För att få tillgång till datan.
-	std::mutex mtx;
-	// Vissa saker ska inte göras när noterna spelas upp. Denna mutex är låst då.
-	AtomicFlagLock<true> playing;
+	SpecialReaderLock mtx;
 	std::vector<Track> data;
 };
 
 class PlayState
 {
 public:
-	class AlreadyPlayingException : public WRE
-	{
-	public:
-		AlreadyPlayingException() : WRE(L"Song is already playing") {}
-	};
 	struct NotePlayState
 	{
 		Tone tone;
@@ -49,13 +42,12 @@ public:
 		Sample samples[2];
 	};
 private:
-	std::unique_lock<AtomicFlagLock<true>> playingLock;
+	SpecialLockGuard playingLock;
 	double position;
 	Tracks& tracks;
 	std::vector<std::vector<SectionPlayState>> trackIterators;
 	BPM bpm;
 public:
-	// Kastar PlayState::AlreadyPlayingException om låten redan spelas.
 	PlayState(Tracks& tracks, BPM bpm);
 
 	SamplePair get(uint32_t sampleRate);
