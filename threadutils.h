@@ -119,9 +119,28 @@ public:
 class SpecialReaderLock
 {
 private:
+	std::atomic_uint64_t nextQueueNumber;
+	std::atomic_uint64_t nowServing;
+
 	std::atomic_uint64_t sl;
 	std::atomic_flag sr;
 	std::atomic_flag el;
+
+	void waitInLine() noexcept
+	{
+		const std::uint64_t num = nextQueueNumber++;
+		std::uint64_t serving;
+		while ((serving = nowServing.load()) != num)
+		{
+			nowServing.wait(serving);
+		}
+	}
+
+	void serveNext() noexcept
+	{
+		nowServing++;
+		nowServing.notify_all();
+	}
 
 	template <typename T>
 	static T clearIfTrue(T val, std::atomic_flag& af) noexcept
@@ -146,12 +165,15 @@ private:
 	};
 public:
 	SpecialReaderLock() noexcept :
+		nextQueueNumber(0ull),
+		nowServing(0ull),
 		sl(0ull),
 		sr{},
 		el{} {}
 	
 	void lock() noexcept
 	{
+		waitInLine();
 		do
 		{
 			do
@@ -168,18 +190,23 @@ public:
 				// el.notify_all();
 			} while (clearIfTrue(sl.load(), el));
 		} while (clearIfTrue(sr.test(), el));
+		serveNext();
 	}
 
 	/* Väntar på trådar med shared eller exclusive access, returnerar
 	   falskt om den specialla läsaren har låst. */
 	bool try_lock() noexcept
 	{
+		waitInLine();
 		do
 		{
 			do
 			{
 				if (sr.test())
+				{
+					serveNext();
 					return false;
+				}
 				while (const std::uint64_t old = sl.load())
 				{
 					sl.wait(old);
@@ -191,9 +218,11 @@ public:
 			{
 				el.clear();
 				el.notify_all();
+				serveNext();
 				return false;
 			}
 		} while (clearIfTrue(sl.load(), el));
+		serveNext();
 		return true;
 	}
 
@@ -205,12 +234,14 @@ public:
 
 	void lock_shared() noexcept
 	{
+		waitInLine();
 		do
 		{
 			el.wait(true);
 			sl++;
 			sl.notify_all();
 		} while (subIfTrue(el.test(), sl));
+		serveNext();
 	}
 
 	void unlock_shared() noexcept
@@ -221,6 +252,7 @@ public:
 
 	void lock_special() noexcept
 	{
+		waitInLine();
 		do
 		{
 			do
@@ -230,6 +262,7 @@ public:
 			} while (sr.test_and_set());
 			// sr.notify_all();
 		} while (clearIfTrue(el.test(), sr));
+		serveNext();
 	}
 
 	void unlock_special() noexcept
@@ -241,6 +274,7 @@ public:
 	// Uppgradera från speciell till speciell och exklusiv.
 	void upgrade() noexcept
 	{
+		waitInLine();
 		do
 		{
 			while (const std::uint64_t old = sl.load())
@@ -253,6 +287,7 @@ public:
 			} while (el.test_and_set());
 			// el.notify_all();
 		} while (clearIfTrue(sl.load(), el));
+		serveNext();
 	}
 };
 
